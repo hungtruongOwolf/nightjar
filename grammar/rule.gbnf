@@ -1,0 +1,10 @@
+# Constrains the RuleCompiler's output to exactly the flat rule schema, in a
+# fixed field order, so it always parses. subject is a closed enum (NG6); times
+# are HH:MM; zone is a short lowercase word; cooldown is an integer.
+root ::= "{\"subject\":" ws subject ",\"zone\":" ws zone ",\"start\":" ws time ",\"end\":" ws time ",\"cooldown_s\":" ws int "}"
+subject ::= "\"person\"" | "\"vehicle\"" | "\"animal\"" | "\"package\""
+zone ::= "\"" word "\""
+word ::= [a-z]+
+time ::= "\"" [0-2] [0-9] ":" [0-5] [0-9] "\""
+int ::= [0-9]+
+ws ::= [ ]*

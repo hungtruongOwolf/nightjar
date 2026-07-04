@@ -71,3 +71,13 @@ if(NIGHTJAR_VLM)
   add_executable(nightjar_replay_vlm vlm/nightjar_replay_vlm.cpp)
   target_link_libraries(nightjar_replay_vlm PRIVATE nightjar_vlm)
 endif()
+
+if(NIGHTJAR_VLM)
+  add_library(nightjar_text vlm/llama_text_model.cpp)
+  target_include_directories(nightjar_text PUBLIC vlm ${LLAMA_CPP_ROOT}/include /opt/homebrew/opt/ggml/include)
+  target_link_directories(nightjar_text PUBLIC ${LLAMA_CPP_ROOT}/lib /opt/homebrew/opt/ggml/lib)
+  target_link_libraries(nightjar_text PUBLIC nightjar llama)
+
+  add_executable(rule_gate vlm/rule_gate.cpp)
+  target_link_libraries(rule_gate PRIVATE nightjar_text)
+endif()

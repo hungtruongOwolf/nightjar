@@ -1,0 +1,24 @@
+# Expected subject for each rule in rules_20.txt, in the same order
+# (blank lines and # comments are skipped in both files when zipped).
+# The subject is the compiler quality gate's primary metric; zone/time are
+# secondary and the confirmation screen lets the user fix them.
+person
+vehicle
+animal
+package
+person
+person
+vehicle
+person
+person
+package
+animal
+vehicle
+person
+animal
+person
+vehicle
+person
+package
+person
+vehicle
