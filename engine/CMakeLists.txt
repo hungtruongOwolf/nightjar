@@ -25,6 +25,7 @@ add_library(nightjar
   src/rule.cpp
   src/rule_engine.cpp
   src/alert_sink.cpp
+  src/scripted_vlm_worker.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
