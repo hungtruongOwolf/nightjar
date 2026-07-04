@@ -27,6 +27,8 @@ add_library(nightjar
   src/alert_sink.cpp
   src/scripted_vlm_worker.cpp
   src/pipeline.cpp
+  src/json_object.cpp
+  src/rule_compiler.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
