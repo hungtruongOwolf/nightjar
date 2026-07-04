@@ -18,6 +18,8 @@ add_library(nightjar
   src/pgm.cpp
   src/file_replay_source.cpp
   src/telemetry.cpp
+  src/gate_steps.cpp
+  src/motion_gate.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
