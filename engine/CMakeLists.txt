@@ -27,3 +27,10 @@ target_include_directories(nightjar PUBLIC include)
 # repo builds offline — matters for a $0 project a stranger will clone).
 enable_testing()
 add_subdirectory(tests)
+
+# Micro-benchmarks (not tests) — build with -DNIGHTJAR_BENCH=ON.
+option(NIGHTJAR_BENCH "Build micro-benchmarks" ON)
+if(NIGHTJAR_BENCH)
+  add_executable(gate_bench bench/gate_bench.cpp)
+  target_link_libraries(gate_bench PRIVATE nightjar)
+endif()
