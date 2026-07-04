@@ -22,6 +22,8 @@ add_library(nightjar
   src/motion_gate.cpp
   src/frame_ops.cpp
   src/best_frame_selector.cpp
+  src/rule.cpp
+  src/rule_engine.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
