@@ -1,0 +1,20 @@
+# Models are downloaded by scripts, never committed (multi-GB)
+models/
+*.gguf
+
+# Build outputs
+build/
+DerivedData/
+*.o
+*.a
+
+# Evaluation media: raw clips stay local (only labels/manifests are committed)
+clips/raw/
+
+# Benchmark scratch output (final reports ARE committed)
+bench/out/
+
+# macOS / Xcode noise
+.DS_Store
+xcuserdata/
+*.xcuserstate
