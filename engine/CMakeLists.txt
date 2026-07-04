@@ -45,3 +45,22 @@ endif()
 # Replay demo CLI (the `make demo` entry point).
 add_executable(nightjar_demo tools/nightjar_demo.cpp)
 target_link_libraries(nightjar_demo PRIVATE nightjar)
+
+# Real llama.cpp-backed VLM worker — optional (keeps the core offline-buildable).
+# Enable with -DNIGHTJAR_VLM=ON; expects llama.cpp headers/libs (brew).
+option(NIGHTJAR_VLM "Build the mtmd/llama.cpp VLM worker" OFF)
+if(NIGHTJAR_VLM)
+  if(NOT LLAMA_CPP_ROOT)
+    execute_process(COMMAND brew --prefix llama.cpp OUTPUT_VARIABLE LLAMA_CPP_ROOT
+                    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  endif()
+  message(STATUS "llama.cpp root: ${LLAMA_CPP_ROOT}")
+  add_library(nightjar_vlm vlm/mtmd_vlm_worker.cpp)
+  target_include_directories(nightjar_vlm PUBLIC vlm ${LLAMA_CPP_ROOT}/include /opt/homebrew/opt/ggml/include)
+  target_link_directories(nightjar_vlm PUBLIC /opt/homebrew/opt/ggml/lib)
+  target_link_directories(nightjar_vlm PUBLIC ${LLAMA_CPP_ROOT}/lib)
+  target_link_libraries(nightjar_vlm PUBLIC nightjar llama mtmd)
+
+  add_executable(vlm_probe vlm/vlm_probe.cpp)
+  target_link_libraries(vlm_probe PRIVATE nightjar_vlm)
+endif()
