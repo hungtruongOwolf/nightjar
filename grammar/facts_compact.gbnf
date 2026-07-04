@@ -1,0 +1,8 @@
+# Token-diet variant of facts.gbnf: four y/n answers in fixed order
+# (person, vehicle, animal, package), e.g. "ynnn".
+# Rationale: decode on a phone-class CPU runs ~15-40 tok/s for 0.5B models;
+# the full-JSON grammar spends 0.7-1.5s decoding fixed key names that carry
+# zero information. Four booleans are four bits. The prompt must state the
+# answer format and order explicitly.
+root ::= yn yn yn yn
+yn   ::= "y" | "n"
