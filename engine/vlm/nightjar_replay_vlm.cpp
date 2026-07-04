@@ -6,22 +6,30 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <memory>
+
 #include "mtmd_vlm_worker.h"
 #include "nightjar/alert_sink.h"
 #include "nightjar/file_replay_source.h"
 #include "nightjar/pipeline.h"
 #include "nightjar/rule_engine.h"
 #include "nightjar/telemetry.h"
+#ifdef NIGHTJAR_HAVE_NET
+#include "ntfy_sink.h"
+#endif
 
 using namespace nightjar;
 
 int main(int argc, char** argv) {
     if (argc < 4) {
-        std::fprintf(stderr, "usage: %s <frames_dir> <model.gguf> <mmproj.gguf> [fps]\n", argv[0]);
+        std::fprintf(stderr,
+                     "usage: %s <frames_dir> <model.gguf> <mmproj.gguf> [fps] [ntfy_topic]\n",
+                     argv[0]);
         return 2;
     }
     const std::string frames_dir = argv[1];
     const double fps = argc > 4 ? std::atof(argv[4]) : 30.0;
+    const std::string ntfy_topic = argc > 5 ? argv[5] : "";
 
     Rule r;
     r.id = "backyard-night";
@@ -44,9 +52,24 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // Always capture; also push to ntfy if a topic was given and net is built in.
     CapturingSink sink;
+    MultiSink fanout;
+    fanout.add(std::shared_ptr<IAlertSink>(&sink, [](IAlertSink*) {}));  // non-owning
+#ifdef NIGHTJAR_HAVE_NET
+    if (!ntfy_topic.empty()) {
+        NtfyConfig ncfg;
+        ncfg.topic = ntfy_topic;
+        fanout.add(std::make_shared<NtfySink>(ncfg));
+        std::printf("pushing alerts to ntfy.sh/%s\n", ntfy_topic.c_str());
+    }
+#else
+    if (!ntfy_topic.empty())
+        std::printf("(built without NIGHTJAR_NET — ntfy topic ignored)\n");
+#endif
+
     Telemetry tel;
-    Pipeline pipe(PipelineConfig{}, &rules, &vlm, &sink, &tel);
+    Pipeline pipe(PipelineConfig{}, &rules, &vlm, &fanout, &tel);
     pipe.set_clock([] { return Clock{23 * 60 + 42, 1'700'000'000}; });
 
     FileReplaySource source(ReplayConfig{frames_dir, fps, false});
