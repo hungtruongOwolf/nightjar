@@ -1,0 +1,34 @@
+# xcodegen spec for the KT1 on-device VLM latency bench.
+# Regenerate the Xcode project with:  xcodegen -s project.yml
+# Prerequisite: build llama.xcframework first (see README.md).
+name: NightjarKT1
+options:
+  bundleIdPrefix: dev.hungtruong
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    # Personal Team: set your team id here or pass via
+    #   xcodebuild ... DEVELOPMENT_TEAM=XXXXXXXXXX -allowProvisioningUpdates
+    CODE_SIGN_STYLE: Automatic
+targets:
+  NightjarKT1:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    resources:
+      - path: Resources
+        optional: true
+    dependencies:
+      - framework: ../../../vendor/llama.cpp/build-apple/llama.xcframework
+        embed: true
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
+        CFBundleDisplayName: NightjarKT1
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.hungtruong.nightjar-kt1
