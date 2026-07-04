@@ -24,6 +24,7 @@ add_library(nightjar
   src/best_frame_selector.cpp
   src/rule.cpp
   src/rule_engine.cpp
+  src/alert_sink.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
