@@ -20,6 +20,7 @@ add_library(nightjar
   src/telemetry.cpp
   src/gate_steps.cpp
   src/motion_gate.cpp
+  src/frame_ops.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
