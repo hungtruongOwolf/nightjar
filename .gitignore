@@ -24,3 +24,8 @@ xcuserdata/
 
 # CMake build dirs
 engine/build/
+
+# iOS bench fixtures (downloaded/derived, not source)
+bench/ios-kt1/Resources/models/*
+bench/ios-kt1/Resources/images/*
+!bench/ios-kt1/Resources/*/.gitkeep
