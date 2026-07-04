@@ -1,0 +1,42 @@
+# RuleCompiler quality gate: 20 natural-English rules, all within the v1
+# vocabulary (person|vehicle|animal|package × zone × time window × appears).
+# Pass = >=16/20 compiled to the correct JSON (week 3 gate; fail activates
+# the C6 escalation: Qwen2.5-1.5B loaded transiently at setup only).
+# Format: one rule per line; blank lines and # comments ignored.
+# Expected outputs live in rules_20_expected/ (added with the compiler).
+
+# -- straightforward, one per subject --
+notify me if a person enters the backyard after 10pm
+alert me when a car pulls into the driveway
+tell me if an animal gets into the garden at night
+let me know when a package arrives at the front door
+
+# -- overnight time windows (must wrap midnight) --
+warn me about people in the yard between 11pm and 5am
+if anyone shows up near the garage from midnight to 6 in the morning, wake me up
+
+# -- daytime / explicit ranges --
+ping me if a vehicle appears in front of the shop between 9am and 6pm
+watch for people at the back entrance during the day
+
+# -- paraphrases that avoid the obvious keyword --
+someone is walking around my backyard late at night — I want to know
+a delivery showed up? tell me
+is that a dog in my vegetable patch again? notify me
+somebody parked on my lawn, I want an alert
+
+# -- no time window (always active) --
+alert me whenever a person is at the front gate
+tell me any time an animal crosses the porch
+
+# -- explicit cooldown-ish phrasing (compiler may map or default) --
+notify me about people in the yard after 9pm, but not more than once every ten minutes
+if a car stops outside, alert me — no need to repeat for the same car within the hour
+
+# -- zone wording variety --
+watch the area near the shed for anyone after dark
+if a package is left where I marked, send me a message
+
+# -- tests that the compiler picks ONE subject correctly --
+I care about people, not cats — backyard, after 10
+only vehicles matter for the driveway rule, day or night

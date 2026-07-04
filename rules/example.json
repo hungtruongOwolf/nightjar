@@ -1,0 +1,10 @@
+{
+  "id": "rule-001",
+  "raw_text": "notify me if a person enters the backyard after 10pm",
+  "subject": "person",
+  "zone_id": "backyard",
+  "event": "appears",
+  "time_window": { "start": "22:00", "end": "06:00" },
+  "cooldown_s": 120,
+  "actions": [ { "type": "ntfy", "topic": "sentry-demo-x7k2" } ]
+}
