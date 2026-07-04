@@ -64,3 +64,8 @@ if(NIGHTJAR_VLM)
   add_executable(vlm_probe vlm/vlm_probe.cpp)
   target_link_libraries(vlm_probe PRIVATE nightjar_vlm)
 endif()
+
+if(NIGHTJAR_VLM)
+  add_executable(nightjar_replay_vlm vlm/nightjar_replay_vlm.cpp)
+  target_link_libraries(nightjar_replay_vlm PRIVATE nightjar_vlm)
+endif()
