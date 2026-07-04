@@ -1,0 +1,10 @@
+# One executable per test file; each registered with CTest.
+function(nightjar_test name)
+  add_executable(${name} ${name}.cpp)
+  target_link_libraries(${name} PRIVATE nightjar)
+  target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  add_test(NAME ${name} COMMAND ${name})
+endfunction()
+
+nightjar_test(test_pgm)
+nightjar_test(test_file_replay_source)
