@@ -81,3 +81,20 @@ if(NIGHTJAR_VLM)
   add_executable(rule_gate vlm/rule_gate.cpp)
   target_link_libraries(rule_gate PRIVATE nightjar_text)
 endif()
+
+# ntfy HTTP alert sink — optional (libcurl). Core stays dependency-free.
+option(NIGHTJAR_NET "Build the ntfy HTTP alert sink" OFF)
+if(NIGHTJAR_NET)
+  find_package(CURL REQUIRED)
+  add_library(nightjar_net net/ntfy_sink.cpp)
+  target_include_directories(nightjar_net PUBLIC net ${CURL_INCLUDE_DIRS})
+  target_link_libraries(nightjar_net PUBLIC nightjar CURL::libcurl)
+
+  add_executable(ntfy_probe net/ntfy_probe.cpp)
+  target_link_libraries(ntfy_probe PRIVATE nightjar_net)
+
+  add_executable(test_ntfy net/test_ntfy.cpp)
+  target_include_directories(test_ntfy PRIVATE tests)
+  target_link_libraries(test_ntfy PRIVATE nightjar_net)
+  add_test(NAME test_ntfy COMMAND test_ntfy)
+endif()
