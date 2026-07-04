@@ -8,3 +8,4 @@ endfunction()
 
 nightjar_test(test_pgm)
 nightjar_test(test_file_replay_source)
+nightjar_test(test_telemetry)

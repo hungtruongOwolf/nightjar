@@ -17,6 +17,7 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 add_library(nightjar
   src/pgm.cpp
   src/file_replay_source.cpp
+  src/telemetry.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
