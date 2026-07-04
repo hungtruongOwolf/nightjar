@@ -1,4 +1,6 @@
-# Sentry
+# Nightjar
+
+*Sits still. Watches all night. Never phones home.*
 
 **Turn the spare iPhone in your drawer into an AI guard that understands plain English — 100% on-device.**
 
@@ -10,12 +12,12 @@ Built for the **Arm Create: AI Optimization Challenge 2026 — Track 3 Mobile AI
 
 ## Planned sections (filled in as the project lands)
 
-1. **Overview & why it should win** — the living-novelty axis: no shipped system lets a user state a natural-language condition that is compiled once, on a consumer device, into the *trigger* for camera alerts. Prior art & where Sentry differs (Frigate GenAI, HA LLM Vision, SenseCAP Watcher, smolvlm-realtime-webcam, SCOPE, and friends) — with proper credit.
+1. **Overview & why it should win** — the living-novelty axis: no shipped system lets a user state a natural-language condition that is compiled once, on a consumer device, into the *trigger* for camera alerts. Prior art & where Nightjar differs (Frigate GenAI, HA LLM Vision, SenseCAP Watcher, smolvlm-realtime-webcam, SCOPE, and friends) — with proper credit.
 2. **Architecture** — one portable C++ engine, two thin shells (iOS SwiftUI, macOS replay); two-tier gating; deterministic rule engine (no AI at match time).
 3. **Arm optimization story** — hand-written NEON Tier 1 (scalar-twin tested), INT4 quantization recipe, KleidiAI on/off ablation, E/P-core QoS partitioning on big.LITTLE, thermal-aware duty cycling. Measured on iPhone 13 Pro Max (A15, Arm64: NEON + dotprod + i8mm) and Apple M2 Max; Linux-aarch64 replay build.
 4. **Honest numbers** — per-stage p50/p99 (VLM split encode/prefill/decode), the six mobile constraints the track names: model size · memory use · responsiveness · battery awareness · offline use · time to first token.
 5. **Setup: build / run / validate** — `make demo` replays a clip on any Mac in ≤5 minutes, no iPhone required. See `JUDGES.md` (coming) for the 5-tier validation ladder.
-6. **When NOT to use Sentry** — not a life-safety system; no face recognition; degraded modes announce themselves honestly.
+6. **When NOT to use Nightjar** — not a life-safety system; no face recognition; degraded modes announce themselves honestly.
 7. **Reusable artifacts** — portable engine, replay harness, labeled false-positive clip dataset, INT4 model recipe, rule-compiler prompt assets.
 
 ## License

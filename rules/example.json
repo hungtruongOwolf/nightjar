@@ -6,5 +6,5 @@
   "event": "appears",
   "time_window": { "start": "22:00", "end": "06:00" },
   "cooldown_s": 120,
-  "actions": [ { "type": "ntfy", "topic": "sentry-demo-x7k2" } ]
+  "actions": [ { "type": "ntfy", "topic": "nightjar-demo-x7k2" } ]
 }
