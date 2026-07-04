@@ -137,6 +137,7 @@ std::string Report::to_markdown() const {
     char line[256];
     for (int i = 0; i < static_cast<int>(Segment::Count); ++i) {
         const Distribution& d = segments[i];
+        if (d.count == 0) continue;  // don't show stages that were never measured
         std::snprintf(line, sizeof(line),
                       "| %s | %zu | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f |\n",
                       segment_name(static_cast<Segment>(i)), d.count, d.p50, d.p90, d.p99,

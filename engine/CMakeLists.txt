@@ -41,3 +41,7 @@ if(NIGHTJAR_BENCH)
   add_executable(gate_bench bench/gate_bench.cpp)
   target_link_libraries(gate_bench PRIVATE nightjar)
 endif()
+
+# Replay demo CLI (the `make demo` entry point).
+add_executable(nightjar_demo tools/nightjar_demo.cpp)
+target_link_libraries(nightjar_demo PRIVATE nightjar)
