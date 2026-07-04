@@ -22,7 +22,8 @@ struct CandidateFrame {
     Letterboxed image;        // letterbox_size × letterbox_size grayscale
     Rect source_bbox;         // motion bbox in original frame coordinates
     uint64_t seq = 0;         // source frame seq (best frame chosen)
-    uint64_t ts_mono_ns = 0;
+    uint64_t ts_mono_ns = 0;  // capture time (t0) of the chosen frame
+    uint64_t event_id = 0;    // assigned by the pipeline for telemetry correlation
     double sharpness = 0.0;
     bool early_exit = false;  // published early (good enough) vs at window close
 };
@@ -43,7 +44,7 @@ public:
                                         uint64_t now_ns);
 
 private:
-    void update_best(const FrameView& frame, const GateResult& gate, uint64_t now_ns);
+    void update_best(const FrameView& frame, const GateResult& gate);
     CandidateFrame emit(bool early_exit);
 
     BestFrameConfig config_;

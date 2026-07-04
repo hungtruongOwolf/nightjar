@@ -4,8 +4,7 @@ namespace nightjar {
 
 BestFrameSelector::BestFrameSelector(BestFrameConfig config) : config_(config) {}
 
-void BestFrameSelector::update_best(const FrameView& frame, const GateResult& gate,
-                                    uint64_t now_ns) {
+void BestFrameSelector::update_best(const FrameView& frame, const GateResult& gate) {
     const Rect crop = expand_rect(gate.blob_bbox, config_.crop_margin, frame.width, frame.height);
 
     // Sharpness of the crop region (in-place on the borrowed plane, stride-aware).
@@ -18,7 +17,7 @@ void BestFrameSelector::update_best(const FrameView& frame, const GateResult& ga
                                      config_.letterbox_size);
     best_.source_bbox = gate.blob_bbox;
     best_.seq = frame.seq;
-    best_.ts_mono_ns = now_ns;
+    best_.ts_mono_ns = frame.ts_mono_ns;  // capture time (t0), for end-to-end latency
     best_.sharpness = sharpness;
     best_area_ = gate.blob_area_blocks;
     have_best_ = true;
@@ -49,7 +48,7 @@ std::optional<CandidateFrame> BestFrameSelector::offer(const FrameView& frame,
 
     // Track the largest-blob frame in the window.
     if (!have_best_ || gate.blob_area_blocks > best_area_) {
-        update_best(frame, gate, now_ns);
+        update_best(frame, gate);
     }
 
     // Early-exit: a big, sharp blob is worth sending now rather than waiting out
