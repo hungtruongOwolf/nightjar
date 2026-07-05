@@ -30,6 +30,7 @@ add_library(nightjar
   src/json_object.cpp
   src/rule_compiler.cpp
   src/temporal_rule_engine.cpp
+  src/scripted_predicate_vlm.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 

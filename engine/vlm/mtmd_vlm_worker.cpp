@@ -16,27 +16,8 @@ double ms_since(steady::time_point t0) {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(steady::now() - t0).count() / 1e6;
 }
 
-// Single y/n answer per subject (KT1: reliable one-at-a-time on the 500M model).
+// Single y/n answer per question (KT1: reliable one-at-a-time on the 500M model).
 constexpr const char* kGrammar = "root ::= \"y\" | \"n\"\n";
-
-const char* subject_word(Subject s) {
-    switch (s) {
-        case Subject::Person: return "person";
-        case Subject::Vehicle: return "vehicle";
-        case Subject::Animal: return "animal";
-        case Subject::Package: return "package";
-    }
-    return "thing";
-}
-
-void set_subject(Facts& f, Subject s, bool present) {
-    switch (s) {
-        case Subject::Person: f.person = present; break;
-        case Subject::Vehicle: f.vehicle = present; break;
-        case Subject::Animal: f.animal = present; break;
-        case Subject::Package: f.package = present; break;
-    }
-}
 
 }  // namespace
 
@@ -48,6 +29,7 @@ struct MtmdVlmWorker::Impl {
 };
 
 MtmdVlmWorker::MtmdVlmWorker(const MtmdConfig& config) : subjects_(config.subjects) {
+    (void)subjects_;  // retained for config compatibility; evaluate() drives predicates
     impl_ = new Impl();
     llama_backend_init();
 
@@ -91,93 +73,104 @@ MtmdVlmWorker::~MtmdVlmWorker() {
     llama_backend_free();
 }
 
-Facts MtmdVlmWorker::infer(const CandidateFrame& candidate) {
-    Facts facts;
-    if (!ok_) return facts;
-
-    // mtmd bitmaps are RGB; replicate the grayscale plane across 3 channels.
-    const uint32_t w = static_cast<uint32_t>(candidate.image.size);
-    const uint32_t h = w;
-    std::vector<unsigned char> rgb(static_cast<size_t>(w) * h * 3);
-    for (size_t i = 0; i < static_cast<size_t>(w) * h; ++i) {
-        const unsigned char v = candidate.image.pixels[i];
-        rgb[i * 3 + 0] = v;
-        rgb[i * 3 + 1] = v;
-        rgb[i * 3 + 2] = v;
-    }
-    mtmd_bitmap* bitmap = mtmd_bitmap_init(w, h, rgb.data());
-    if (!bitmap) return facts;
+// Ask one y/n question about a pre-built RGB bitmap; returns the boolean and
+// accumulates the encode/prefill/decode split into `out`.
+bool MtmdVlmWorker::answer_one(void* bitmap_ptr, const std::string& question, PredicateResult& out) {
+    mtmd_bitmap* bitmap = static_cast<mtmd_bitmap*>(bitmap_ptr);
+    // Fresh context per question so answers don't contaminate each other; the
+    // image is re-encoded (encode-once-reuse across questions = Open Q1).
+    llama_memory_clear(llama_get_memory(impl_->lctx), true);
 
     const std::string marker = mtmd_default_marker();
-    std::string raw;
-    for (Subject subject : subjects_) {
-        // Fresh context per question so answers don't contaminate each other;
-        // the image is re-encoded (32ms on Metal) — encode-once-reuse across
-        // subjects is a tracked optimization (Open Q1).
-        llama_memory_clear(llama_get_memory(impl_->lctx), true);
-
-        const std::string prompt = "<|im_start|>User: " + marker + "Is there a " +
-                                   subject_word(subject) +
-                                   " in this image? Answer y or n.<end_of_utterance>\nAssistant:";
-        mtmd_input_chunks* chunks = mtmd_input_chunks_init();
-        mtmd_input_text text{prompt.c_str(), /*add_special=*/true, /*parse_special=*/true};
-        const mtmd_bitmap* bitmaps[1] = {bitmap};
-        if (mtmd_tokenize(impl_->mctx, chunks, &text, bitmaps, 1) != 0) {
-            mtmd_input_chunks_free(chunks);
-            continue;
-        }
-
-        // Walk chunks: time the vision encode separately from prompt prefill.
-        llama_pos n_past = 0;
-        const size_t n_chunks = mtmd_input_chunks_size(chunks);
-        for (size_t i = 0; i < n_chunks; ++i) {
-            const mtmd_input_chunk* chunk = mtmd_input_chunks_get(chunks, i);
-            const bool is_last = (i == n_chunks - 1);
-            if (mtmd_input_chunk_get_type(chunk) == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
-                auto t = steady::now();
-                if (mtmd_encode_chunk(impl_->mctx, chunk) != 0) break;
-                float* embd = mtmd_get_output_embd(impl_->mctx);
-                facts.encode_ms += static_cast<float>(ms_since(t));
-                t = steady::now();
-                llama_pos np = n_past;
-                if (mtmd_helper_decode_image_chunk(impl_->mctx, impl_->lctx, chunk, embd, n_past, 0,
-                                                   2048, &np, nullptr, nullptr) != 0)
-                    break;
-                n_past = np;
-                facts.prefill_ms += static_cast<float>(ms_since(t));
-            } else {
-                auto t = steady::now();
-                llama_pos np = n_past;
-                if (mtmd_helper_eval_chunk_single(impl_->mctx, impl_->lctx, chunk, n_past, 0, 2048,
-                                                  is_last, &np) != 0)
-                    break;
-                n_past = np;
-                facts.prefill_ms += static_cast<float>(ms_since(t));
-            }
-        }
-
-        // Grammar-constrained decode: exactly one y/n token. The chain owns and
-        // frees both samplers.
-        auto t_dec = steady::now();
-        llama_sampler* chain = llama_sampler_chain_init(llama_sampler_chain_default_params());
-        llama_sampler_chain_add(chain, llama_sampler_init_grammar(impl_->vocab, kGrammar, "root"));
-        llama_sampler_chain_add(chain, llama_sampler_init_greedy());
-        const llama_token tok = llama_sampler_sample(chain, impl_->lctx, -1);
-        char buf[32];
-        const int n = llama_token_to_piece(impl_->vocab, tok, buf, sizeof(buf), 0, false);
-        char answer = '?';
-        for (int k = 0; k < n; ++k)
-            if (buf[k] == 'y' || buf[k] == 'n') answer = buf[k];
-        facts.decode_ms += static_cast<float>(ms_since(t_dec));
-        llama_sampler_free(chain);
-
-        set_subject(facts, subject, answer == 'y');
-        raw.push_back(answer);
+    const std::string prompt =
+        "<|im_start|>User: " + marker + question + "<end_of_utterance>\nAssistant:";
+    mtmd_input_chunks* chunks = mtmd_input_chunks_init();
+    mtmd_input_text text{prompt.c_str(), /*add_special=*/true, /*parse_special=*/true};
+    const mtmd_bitmap* bitmaps[1] = {bitmap};
+    if (mtmd_tokenize(impl_->mctx, chunks, &text, bitmaps, 1) != 0) {
         mtmd_input_chunks_free(chunks);
+        return false;
     }
 
-    facts.raw_json = raw;
+    // Walk chunks: time the vision encode separately from prompt prefill.
+    llama_pos n_past = 0;
+    const size_t n_chunks = mtmd_input_chunks_size(chunks);
+    for (size_t i = 0; i < n_chunks; ++i) {
+        const mtmd_input_chunk* chunk = mtmd_input_chunks_get(chunks, i);
+        const bool is_last = (i == n_chunks - 1);
+        if (mtmd_input_chunk_get_type(chunk) == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
+            auto t = steady::now();
+            if (mtmd_encode_chunk(impl_->mctx, chunk) != 0) break;
+            float* embd = mtmd_get_output_embd(impl_->mctx);
+            out.encode_ms += static_cast<float>(ms_since(t));
+            t = steady::now();
+            llama_pos np = n_past;
+            if (mtmd_helper_decode_image_chunk(impl_->mctx, impl_->lctx, chunk, embd, n_past, 0,
+                                               2048, &np, nullptr, nullptr) != 0)
+                break;
+            n_past = np;
+            out.prefill_ms += static_cast<float>(ms_since(t));
+        } else {
+            auto t = steady::now();
+            llama_pos np = n_past;
+            if (mtmd_helper_eval_chunk_single(impl_->mctx, impl_->lctx, chunk, n_past, 0, 2048,
+                                              is_last, &np) != 0)
+                break;
+            n_past = np;
+            out.prefill_ms += static_cast<float>(ms_since(t));
+        }
+    }
+
+    // Grammar-constrained decode: exactly one y/n token. The chain owns/frees both.
+    auto t_dec = steady::now();
+    llama_sampler* chain = llama_sampler_chain_init(llama_sampler_chain_default_params());
+    llama_sampler_chain_add(chain, llama_sampler_init_grammar(impl_->vocab, kGrammar, "root"));
+    llama_sampler_chain_add(chain, llama_sampler_init_greedy());
+    const llama_token tok = llama_sampler_sample(chain, impl_->lctx, -1);
+    char buf[32];
+    const int n = llama_token_to_piece(impl_->vocab, tok, buf, sizeof(buf), 0, false);
+    char answer = 'n';
+    for (int k = 0; k < n; ++k)
+        if (buf[k] == 'y' || buf[k] == 'n') answer = buf[k];
+    out.decode_ms += static_cast<float>(ms_since(t_dec));
+    llama_sampler_free(chain);
+    mtmd_input_chunks_free(chunks);
+    return answer == 'y';
+}
+
+PredicateResult MtmdVlmWorker::evaluate(const CandidateFrame& candidate,
+                                        const std::vector<Predicate>& predicates) {
+    PredicateResult result;
+    if (!ok_) return result;
+
+    // mtmd bitmaps are RGB; replicate the grayscale plane across 3 channels once,
+    // then reuse for every predicate question.
+    const uint32_t w = static_cast<uint32_t>(candidate.image.size);
+    std::vector<unsigned char> rgb(static_cast<size_t>(w) * w * 3);
+    for (size_t i = 0; i < static_cast<size_t>(w) * w; ++i) {
+        const unsigned char v = candidate.image.pixels[i];
+        rgb[i * 3 + 0] = rgb[i * 3 + 1] = rgb[i * 3 + 2] = v;
+    }
+    mtmd_bitmap* bitmap = mtmd_bitmap_init(w, w, rgb.data());
+    if (!bitmap) return result;
+
+    for (const Predicate& p : predicates) {
+        result.answers[p.id] = answer_one(bitmap, p.question, result);
+    }
     mtmd_bitmap_free(bitmap);
+    return result;
+}
+
+Facts MtmdVlmWorker::infer(const CandidateFrame& candidate) {
+    const PredicateResult r = evaluate(candidate, core_predicates());
+    Facts facts;
+    facts.person = r.get("person");
+    facts.vehicle = r.get("vehicle");
+    facts.animal = r.get("animal");
+    facts.package = r.get("package");
+    facts.encode_ms = r.encode_ms;
+    facts.prefill_ms = r.prefill_ms;
+    facts.decode_ms = r.decode_ms;
     return facts;
 }
 

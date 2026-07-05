@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "nightjar/facts.h"
+#include "nightjar/predicate_vlm.h"
 #include "nightjar/vlm_worker.h"
 
 namespace nightjar {
@@ -27,7 +28,7 @@ struct MtmdConfig {
 // with the encode / prefill / decode split (design doc §5.4). This is the only
 // module that links llama.cpp; it is built behind the NIGHTJAR_VLM option so
 // the engine core stays dependency-free and offline-buildable.
-class MtmdVlmWorker : public IVlmWorker {
+class MtmdVlmWorker : public IVlmWorker, public IPredicateVlm {
 public:
     explicit MtmdVlmWorker(const MtmdConfig& config);
     ~MtmdVlmWorker() override;
@@ -38,6 +39,13 @@ public:
     bool ok() const { return ok_; }              // false if the model failed to load
     const std::string& error() const { return error_; }
 
+    // Predicate path (the product): one focused y/n question per predicate —
+    // KT1 found the small model reliable one-fact-at-a-time. Timings summed.
+    PredicateResult evaluate(const CandidateFrame& candidate,
+                             const std::vector<Predicate>& predicates) override;
+
+    // Legacy 4-subject Facts path, kept for the older tools; delegates to
+    // evaluate() over the core predicates.
     Facts infer(const CandidateFrame& candidate) override;
 
     // Free-form question about the frame (verification / relational-reasoning
@@ -46,6 +54,10 @@ public:
                     int max_tokens = 64);
 
 private:
+    // Ask one y/n question about an already-built RGB bitmap; accumulates the
+    // encode/prefill/decode split into `out`.
+    bool answer_one(void* bitmap, const std::string& question, PredicateResult& out);
+
     struct Impl;
     Impl* impl_ = nullptr;
     bool ok_ = false;
