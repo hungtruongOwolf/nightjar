@@ -1,23 +1,27 @@
-# xcodegen spec for the Nightjar iOS shell.
-# Regenerate + build for the Simulator with:
-#   xcodegen -s project.yml
-#   xcodebuild -project Nightjar.xcodeproj -scheme Nightjar \
-#     -sdk iphonesimulator -configuration Debug build
+# xcodegen spec for the Nightjar shells. Two thin targets over ONE portable C++
+# engine (../../engine), reached through NightjarEngine (Obj-C++):
+#   • Nightjar     — iOS app  (device camera; Simulator falls back to synthetic)
+#   • NightjarMac  — macOS app (webcam) — test the live guard on the Mac, no cable
 #
-# The shell is thin: it compiles the portable C++ engine core (../../engine)
-# straight into the app and reaches it through NightjarBridge (Obj-C++). No
-# model and no camera are needed — Tier-2 is the scripted VLM and the input is
-# a synthetic replayed clip, so it runs on the Simulator.
+# Regenerate + build:
+#   xcodegen -s project.yml
+#   xcodebuild -project Nightjar.xcodeproj -scheme NightjarMac -configuration Release build
+#   xcodebuild -project Nightjar.xcodeproj -scheme Nightjar -sdk iphonesimulator -configuration Release build
 name: Nightjar
 options:
   bundleIdPrefix: dev.hungtruong
   deploymentTarget:
     iOS: "16.0"
+    macOS: "13.0"
 settings:
   base:
     SWIFT_VERSION: "5.9"
     CLANG_CXX_LANGUAGE_STANDARD: "c++17"
     CLANG_CXX_LIBRARY: "libc++"
+    HEADER_SEARCH_PATHS:
+      - $(SRCROOT)/../../engine/include
+      - $(SRCROOT)/Sources
+    SWIFT_OBJC_BRIDGING_HEADER: Sources/Nightjar-Bridging-Header.h
 targets:
   Nightjar:
     type: application
@@ -25,18 +29,34 @@ targets:
     sources:
       - path: Sources
       - path: ../../engine/src
-        # engine core .cpp (no VLM/net deps); headers come via search path
     info:
-      path: Info.plist
+      path: Info-iOS.plist
       properties:
         UILaunchScreen: {}
         CFBundleDisplayName: Nightjar
+        NSCameraUsageDescription: "Nightjar watches this camera entirely on-device. No frame ever leaves the phone."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.hungtruong.nightjar
-        SWIFT_OBJC_BRIDGING_HEADER: Sources/Nightjar-Bridging-Header.h
-        HEADER_SEARCH_PATHS:
-          - $(SRCROOT)/../../engine/include
-          - $(SRCROOT)/Sources
-        # Simulator builds don't need signing.
         CODE_SIGNING_ALLOWED: "NO"
+  NightjarMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+      - path: ../../engine/src
+    info:
+      path: Info-Mac.plist
+      properties:
+        CFBundleDisplayName: Nightjar
+        NSCameraUsageDescription: "Nightjar watches this camera entirely on-device. No frame ever leaves the Mac."
+        LSApplicationCategoryType: public.app-category.utilities
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.hungtruong.nightjar.mac
+        # Local dev build: ad-hoc signed, no hardened runtime / sandbox, so the
+        # webcam TCC prompt works when launched from the terminal.
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        ENABLE_HARDENED_RUNTIME: "NO"
+        ENABLE_APP_SANDBOX: "NO"

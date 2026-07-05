@@ -3,3 +3,5 @@
 build/
 DerivedData/
 **/xcuserdata/
+Info-iOS.plist
+Info-Mac.plist
