@@ -31,6 +31,7 @@ add_library(nightjar
   src/rule_compiler.cpp
   src/temporal_rule_engine.cpp
   src/scripted_predicate_vlm.cpp
+  src/energy_meter.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
@@ -108,3 +109,6 @@ if(NIGHTJAR_NET)
   target_link_libraries(test_ntfy PRIVATE nightjar_net)
   add_test(NAME test_ntfy COMMAND test_ntfy)
 endif()
+
+add_executable(nightjar_ablation tools/nightjar_ablation.cpp)
+target_link_libraries(nightjar_ablation PRIVATE nightjar)
