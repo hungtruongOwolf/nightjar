@@ -40,6 +40,11 @@ public:
 
     Facts infer(const CandidateFrame& candidate) override;
 
+    // Free-form question about the frame (verification / relational-reasoning
+    // probing). Returns the model's generated text, ungrammar-constrained.
+    std::string ask(const CandidateFrame& candidate, const std::string& question,
+                    int max_tokens = 64);
+
 private:
     struct Impl;
     Impl* impl_ = nullptr;

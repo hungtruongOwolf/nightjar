@@ -29,6 +29,7 @@ add_library(nightjar
   src/pipeline.cpp
   src/json_object.cpp
   src/rule_compiler.cpp
+  src/temporal_rule_engine.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
@@ -65,6 +66,8 @@ if(NIGHTJAR_VLM)
 
   add_executable(vlm_probe vlm/vlm_probe.cpp)
   target_link_libraries(vlm_probe PRIVATE nightjar_vlm)
+  add_executable(vlm_ask vlm/vlm_ask.cpp)
+  target_link_libraries(vlm_ask PRIVATE nightjar_vlm)
 endif()
 
 if(NIGHTJAR_VLM)

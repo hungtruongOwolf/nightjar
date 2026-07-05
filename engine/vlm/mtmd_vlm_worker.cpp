@@ -181,4 +181,55 @@ Facts MtmdVlmWorker::infer(const CandidateFrame& candidate) {
     return facts;
 }
 
+std::string MtmdVlmWorker::ask(const CandidateFrame& candidate, const std::string& question,
+                               int max_tokens) {
+    if (!ok_) return "";
+    const uint32_t w = static_cast<uint32_t>(candidate.image.size);
+    std::vector<unsigned char> rgb(static_cast<size_t>(w) * w * 3);
+    for (size_t i = 0; i < static_cast<size_t>(w) * w; ++i) {
+        const unsigned char v = candidate.image.pixels[i];
+        rgb[i * 3 + 0] = rgb[i * 3 + 1] = rgb[i * 3 + 2] = v;
+    }
+    mtmd_bitmap* bitmap = mtmd_bitmap_init(w, w, rgb.data());
+    if (!bitmap) return "";
+
+    llama_memory_clear(llama_get_memory(impl_->lctx), true);
+    const std::string marker = mtmd_default_marker();
+    const std::string prompt =
+        "<|im_start|>User: " + marker + question + "<end_of_utterance>\nAssistant:";
+    mtmd_input_chunks* chunks = mtmd_input_chunks_init();
+    mtmd_input_text text{prompt.c_str(), true, true};
+    const mtmd_bitmap* bitmaps[1] = {bitmap};
+    if (mtmd_tokenize(impl_->mctx, chunks, &text, bitmaps, 1) != 0) {
+        mtmd_input_chunks_free(chunks);
+        mtmd_bitmap_free(bitmap);
+        return "";
+    }
+    llama_pos n_past = 0;
+    if (mtmd_helper_eval_chunks(impl_->mctx, impl_->lctx, chunks, n_past, 0, 2048,
+                                /*logits_last=*/true, &n_past) != 0) {
+        mtmd_input_chunks_free(chunks);
+        mtmd_bitmap_free(bitmap);
+        return "";
+    }
+
+    llama_sampler* chain = llama_sampler_chain_init(llama_sampler_chain_default_params());
+    llama_sampler_chain_add(chain, llama_sampler_init_greedy());
+    std::string out;
+    for (int i = 0; i < max_tokens; ++i) {
+        const llama_token tok = llama_sampler_sample(chain, impl_->lctx, -1);
+        if (llama_vocab_is_eog(impl_->vocab, tok)) break;
+        char buf[64];
+        const int n = llama_token_to_piece(impl_->vocab, tok, buf, sizeof(buf), 0, false);
+        if (n > 0) out.append(buf, n);
+        llama_token one = tok;
+        llama_batch b = llama_batch_get_one(&one, 1);
+        if (llama_decode(impl_->lctx, b) != 0) break;
+    }
+    llama_sampler_free(chain);
+    mtmd_input_chunks_free(chunks);
+    mtmd_bitmap_free(bitmap);
+    return out;
+}
+
 }  // namespace nightjar
