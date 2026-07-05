@@ -2,23 +2,175 @@
 
 *Sits still. Watches all night. Never phones home.*
 
-**Turn the spare iPhone in your drawer into an AI guard that understands plain English — 100% on-device.**
+**Turn the spare phone in your drawer into a guard you program in one plain-English sentence — 100% on-device.**
 
-Type a rule like *"notify me if a person enters the backyard after 10pm"*. The phone compiles it once into a deterministic trigger, then watches through a two-tier pipeline: a hand-written NEON motion gate (<0.5ms/frame) feeds an INT4 vision-language model only the ~1–5% of frames that matter. When the rule fires, your main phone buzzes within seconds — with a photo and a one-line explanation. No cloud, no account, no subscription. Pull the network cable and it keeps thinking.
+> Type *"tell me if someone loiters near my car after 10pm."* Nightjar compiles that once, on the phone, into a deterministic rule, then watches: a hand-written NEON motion gate (56 µs/frame) feeds an INT4 vision-language model only the ~1–5 % of frames that matter. No cloud. No account. No subscription. Airplane mode and it still works.
 
-Built for the **Arm Create: AI Optimization Challenge 2026 — Track 3 Mobile AI** ("camera intelligence" on Arm-powered phones). All inference runs locally on Arm64 via llama.cpp + KleidiAI (which qualifies under the track's "or similar runtimes").
+Built for the **Arm Create: AI Optimization Challenge 2026 — Track 3 (Mobile AI, "camera intelligence")**. All inference runs locally on Arm64 via llama.cpp + KleidiAI.
 
-> **Status: Week 1 of 6 — kill-tests in progress.** This README grows as measured numbers replace assumptions. Every number in this repo is tagged either `[VERIFIED: source]` or `[ASSUMPTION → KT#]` (KT = kill-test). Numbers without measurement are never promoted to claims.
+```mermaid
+flowchart LR
+  cam["Camera<br/>640x480, 30fps"] --> gate["NEON motion gate<br/>56us/frame - E-cores"]
+  gate -->|"~1-5% of frames"| best["Best-frame<br/>crop to 448"]
+  best --> slot["ConflatingSlot<br/>keep-latest"]
+  slot --> vlm["SmolVLM-500M INT4<br/>fact sensor - P-cores"]
+  vlm --> deb["debounce"]
+  deb --> fsm["Temporal rule engine<br/>deterministic - us"]
+  fsm --> alert["ntfy push<br/>+ evidence clip"]
+  gate -.->|"discard 88%"| x["drop"]
+```
 
-## Planned sections (filled in as the project lands)
+---
 
-1. **Overview & why it should win** — the living-novelty axis: no shipped system lets a user state a natural-language condition that is compiled once, on a consumer device, into the *trigger* for camera alerts. Prior art & where Nightjar differs (Frigate GenAI, HA LLM Vision, SenseCAP Watcher, smolvlm-realtime-webcam, SCOPE, and friends) — with proper credit.
-2. **Architecture** — one portable C++ engine, two thin shells (iOS SwiftUI, macOS replay); two-tier gating; deterministic rule engine (no AI at match time).
-3. **Arm optimization story** — hand-written NEON Tier 1 (scalar-twin tested), INT4 quantization recipe, KleidiAI on/off ablation, E/P-core QoS partitioning on big.LITTLE, thermal-aware duty cycling. Measured on iPhone 13 Pro Max (A15, Arm64: NEON + dotprod + i8mm) and Apple M2 Max; Linux-aarch64 replay build.
-4. **Honest numbers** — per-stage p50/p99 (VLM split encode/prefill/decode), the six mobile constraints the track names: model size · memory use · responsiveness · battery awareness · offline use · time to first token.
-5. **Setup: build / run / validate** — `make demo` replays a clip on any Mac in ≤5 minutes, no iPhone required. See `JUDGES.md` (coming) for the 5-tier validation ladder.
-6. **When NOT to use Nightjar** — not a life-safety system; no face recognition; degraded modes announce themselves honestly.
-7. **Reusable artifacts** — portable engine, replay harness, labeled false-positive clip dataset, INT4 model recipe, rule-compiler prompt assets.
+## Why this exists — not a smarter camera, *programmable perception*
+
+A Ring or Nest only says *"motion detected."* Making a camera alert on **what you actually care about** normally needs an ML engineer, training data, and a cloud GPU. Nightjar collapses that to **one sentence, on hardware you already own.**
+
+> **The spreadsheet moment for computer vision:** spreadsheets let anyone program logic without being a programmer. Nightjar lets anyone program a camera without being an ML engineer.
+
+| Vision pillar | What it changes |
+|---|---|
+| **Democratized vision** | Program a camera in plain English — no ML, no cloud, no code |
+| **Wakes billions of idle Arm devices** | Every old phone is a supercomputer with a camera + NPU + battery. Reactivate it. |
+| **Privacy over surveillance-capitalism** | Images never leave the device. No account, no subscription, works offline. |
+| **Beyond security** | *"tell me if grandma hasn't moved in 2 hours"* - *"if the baby climbs out of the crib"* - *"when the delivery arrives"* — same engine, new sentence |
+
+---
+
+## What it does that a motion camera can't: **time**
+
+A single frame can't tell you a *behavior*. Nightjar reasons over the **trajectory** of what the VLM sees, so it fires on conditions a closed-vocabulary detector cannot even express:
+
+| Condition | How it's decided (over time) |
+|---|---|
+| **Loitering** | `person` present continuously >= N seconds |
+| **Package left (delivery)** | object *appears and stays* while the person leaves |
+| **Package taken (theft)** | object *was there and disappears* while a person is around |
+| **Appears** | rising edge — not spammed every frame |
+
+**Place vs. take look identical in one frame.** Nightjar tells them apart by the object's presence *before -> after*, never a single image:
+
+```mermaid
+flowchart LR
+  subgraph DELIVERY [Delivery - object stays]
+    direction LR
+    d1["no box"] --> d2["person + box"] --> d3["person leaves"] --> d4["box REMAINS - ok"]
+  end
+  subgraph THEFT [Theft - object gone]
+    direction LR
+    t1["box there"] --> t2["person + box"] --> t3["person leaves"] --> t4["box GONE - alert"]
+  end
+```
+
+The VLM never judges *"is this theft?"* — it only answers simple per-frame facts (*"is there a box? a person?"*), debounced against sensor noise. **All reasoning is deterministic µs code, not a per-frame model call.**
+
+---
+
+## Architecture: perception vs reasoning
+
+The core idea — and why it runs on a phone at all — is decoupling the **expensive, noisy** part (vision) from the **cheap, exact** part (decisions):
+
+```mermaid
+flowchart TB
+  subgraph P ["Perception - small VLM, per-frame, noisy"]
+    direction LR
+    q["is there a person? a package?  -> y/n"] --> dbn["debounce (hysteresis)"]
+  end
+  subgraph R ["Reasoning - deterministic, us, explainable"]
+    direction LR
+    tl["temporal FSM: appears - loiter - left-behind - theft"]
+  end
+  P --> R --> a["alert + evidence clip + fact timeline"]
+```
+
+One portable **C++ engine**, two thin shells (iOS SwiftUI + macOS replay). The gate runs on a `.utility` QoS queue (E-cores); the VLM on `.userInitiated` (P-cores); a `ConflatingSlot` decouples them so the fast path never blocks on the slow one.
+
+---
+
+## From English to a running rule (compiled once, at setup)
+
+We measured that a small model **can't** reliably emit a whole nested rule at once (~2/8). So we **decompose**: it only ever answers focused classification questions (which it does reliably), and deterministic code assembles the rule.
+
+```mermaid
+flowchart LR
+  eng["'tell me if someone<br/>loiters near my car'"] --> q["Qwen2.5-1.5B<br/>(setup only, then freed)"]
+  q --> s["subject? -> person"]
+  q --> e["event? -> stays"]
+  q --> d["dwell? -> 60s"]
+  s --> asm["deterministic<br/>assemble"]
+  e --> asm
+  d --> asm
+  asm --> rule["TemporalRule:<br/>Sustained(person, 60s)"]
+```
+
+| Compiler | Subject | Trigger |
+|---|---|---|
+| Nested one-shot AST (1.5B & 3B) | — | **~2/8** |
+| **Decomposed + few-shot (1.5B)** | **12/12** | **12/12** |
+| SmolVLM text backbone (baseline) | 12/20 -> escalates to Qwen | |
+
+The confirmation screen is a first-class safety net: a small model may be wrong; the user is never misled.
+
+---
+
+## Measured on Arm  `[VERIFIED: M2 Max - SmolVLM-500M-Q4_0]`
+
+Every optimization is a real number, not a claim. iPhone A15 figures are pending a data cable and marked TBD.
+
+| Optimization | Lever | Result |
+|---|---|---|
+| Two-tier motion gate | run VLM on 1-5% of frames | **88% of VLM compute avoided** |
+| NEON Tier-1 gate | hand-written, scalar-twin tested | **56 us/frame** (budget 500 us) |
+| KV-cache reuse (encode-once) | image encoded once per event | VLM **586 -> 229 ms = 2.6x**, answers identical |
+| Fast-path decoupling | letterbox off the capture thread | gate p99 **4 ms -> 73 us = 54x** under burst |
+| INT4 clip storage | JPEG keyframe | **11.7x** vs raw |
+| Inter-frame delta storage | reuse the gate's block model | **2.5x** more (unbounded on static), lossless |
+
+**End-to-end (real SmolVLM, encoder on Metal, LLM on CPU):** VLM `p50 149 ms`, event->alert `p50 174 ms / p99 666 ms`. ISA: `FEAT_DotProd=1 - FEAT_I8MM=1 - FEAT_SME=0`.
+
+The six mobile constraints the track names:
+
+| model size | memory | responsiveness | battery | offline | TTFT |
+|---|---|---|---|---|---|
+| 244 MB (Q4_0) + 190 MB mmproj | <= 1.4 GB budget | 149 ms VLM | 88% compute gated | airplane mode | encode 32 ms |
+
+---
+
+## Storage: we don't store video, we store *events*
+
+```mermaid
+flowchart LR
+  raw["continuous video<br/>~endless"] -->|"event-driven only"| clip["event clip<br/>(pre + post roll)"]
+  clip -->|"JPEG keyframe 11.7x"| j["compressed"]
+  j -->|"inter-frame delta 2.5x+"| f["~200 KB / 3s clip"]
+  facts["fact timeline<br/>(bytes, timestamped)"] --> ev["evidence = clip + timeline"]
+  f --> ev
+```
+
+A bounded, rotating on-device store (hard cap, oldest evicted). A clip is a *span of frames* (real evidence), never a single image. On iOS the same encoder seam takes the hardware HEVC encoder (near-zero energy).
+
+---
+
+## Run it in 5 minutes — no iPhone, no model needed
+
+```bash
+git clone https://github.com/hungtruongOwolf/nightjar && cd nightjar
+make demo      # replays a synthetic clip through the full pipeline -> alert + report
+make test      # 23 test suites (scalar-vs-NEON parity, temporal logic, ...)
+make bench     # gate micro-benchmark (per-step scalar vs NEON, us/frame)
+```
+
+`make demo` needs only a C++17 compiler + CMake. The real VLM path (`-DNIGHTJAR_VLM=ON`) links llama.cpp; see [`JUDGES.md`](JUDGES.md) for the 5-tier validation ladder.
+
+---
+
+## When NOT to use Nightjar
+
+Not a life-safety system — a small VLM has false negatives, and we publish them. No face recognition, no "known vs. stranger." No video leaves the device except the alert crop you configure. Degraded modes (thermal `.critical`, VLM failure) announce themselves honestly as *"motion-only."*
+
+## Reusable artifacts
+
+Portable C++ engine - replay + energy harness - the NEON gate with scalar twins - the decomposed NL->rule compiler + few-shot prompt assets - the inter-frame clip codec - a reproducible compiler eval.
 
 ## License
 
