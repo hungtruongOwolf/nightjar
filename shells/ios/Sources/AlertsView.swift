@@ -4,9 +4,20 @@ import SwiftUI
 struct AlertRecord: Identifiable {
     let id = UUID()
     let text: String
+    let ruleTitle: String        // which rule fired — classifies the evidence
+    let subject: String          // person / vehicle / animal / package
     let image: CGImage?
-    var frames: [CGImage] = []   // short event clip (last ~2s)
+    var frames: [CGImage] = []   // short event clip (empty if the rule saves photo only)
     let date: Date
+
+    var icon: String {
+        switch subject {
+        case "vehicle": return "car.fill"
+        case "animal": return "pawprint.fill"
+        case "package": return "shippingbox.fill"
+        default: return "figure.walk"
+        }
+    }
 }
 
 // The review screen — tap an alert to see the frame Otto flagged. This is the
@@ -66,7 +77,10 @@ struct AlertsView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text(a.text).font(.system(size: 11.5, weight: .medium)).foregroundColor(NW.creamDim).lineLimit(2)
+                HStack(spacing: 5) {
+                    Image(systemName: a.icon).font(.system(size: 10)).foregroundColor(NW.rose)
+                    Text(a.ruleTitle).font(.system(size: 11.5, weight: .semibold)).foregroundColor(NW.creamDim).lineLimit(1)
+                }
                 Text(Self.fmt.string(from: a.date)).font(NW.mono(9)).foregroundColor(NW.muted(0.45))
             }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -99,7 +113,11 @@ private struct DetailView: View {
                     Image(decorative: img, scale: 1).resizable().aspectRatio(contentMode: .fit).cornerRadius(12)
                 }
                 VStack(spacing: 6) {
-                    Text(alert.text).font(.system(size: 15)).foregroundColor(NW.creamDim).multilineTextAlignment(.center)
+                    HStack(spacing: 6) {
+                        Image(systemName: alert.icon).font(.system(size: 12)).foregroundColor(NW.rose)
+                        Text(alert.ruleTitle).font(.system(size: 15, weight: .semibold)).foregroundColor(NW.cream)
+                    }
+                    Text(alert.text).font(.system(size: 12)).foregroundColor(NW.muted(0.6)).multilineTextAlignment(.center)
                     Text(AlertsView.fmt.string(from: alert.date)).font(NW.mono(11)).foregroundColor(NW.muted(0.5))
                     MonoLabel(text: alert.frames.count > 1 ? "CLIP · \(alert.frames.count) FRAMES · ON-DEVICE" : "STAYED ON THIS DEVICE", size: 9, opacity: 0.4)
                 }

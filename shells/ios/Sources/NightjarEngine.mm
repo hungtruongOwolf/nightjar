@@ -16,6 +16,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -40,42 +41,65 @@ uint64_t now_ns() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(steady::now().time_since_epoch()).count();
 }
 
-// Alert sink -> UI callback on the main queue.
+const char* subject_str(Subject s) {
+    switch (s) {
+        case Subject::Vehicle: return "vehicle";
+        case Subject::Animal: return "animal";
+        case Subject::Package: return "package";
+        default: return "person";
+    }
+}
+
+// Alert sink -> UI callback on the main queue. Carries which rule fired and the
+// subject, so the shell can classify the evidence.
 class BlockSink : public IAlertSink {
 public:
-    explicit BlockSink(void (^cb)(NSString*)) : cb_(cb) {}
+    explicit BlockSink(void (^cb)(NSString*, NSString*, NSString*)) : cb_(cb) {}
     void send(const Alert& a) override {
         NSString* s = [NSString stringWithUTF8String:a.one_liner.c_str()];
-        void (^cb)(NSString*) = cb_;
-        dispatch_async(dispatch_get_main_queue(), ^{ cb(s); });
+        NSString* rid = [NSString stringWithUTF8String:a.rule_id.c_str()];
+        NSString* subj = [NSString stringWithUTF8String:subject_str(a.subject)];
+        void (^cb)(NSString*, NSString*, NSString*) = cb_;
+        dispatch_async(dispatch_get_main_queue(), ^{ cb(s, rid, subj); });
     }
 private:
-    void (^cb_)(NSString*);
+    void (^cb_)(NSString*, NSString*, NSString*);
 };
 
-TemporalRule rule_for(const std::string& subject, const std::string& trigger) {
+// A rule exactly as the user built it — nothing fabricated.
+struct RuleSpec {
+    std::string id, rawText, subject, trigger, zoneLabel;
+    int startMin = 0, endMin = 0;  // startMin == endMin => always active
+};
+
+TemporalRule rule_for(const RuleSpec& s) {
     TemporalRule r;
-    r.predicate = subject;
-    r.zone_id = "any";
-    r.time_window = TimeWindow{0, 24 * 60};  // any time (real camera is tested by day)
-    r.cooldown_s = 8;
+    r.id = s.id;
+    r.predicate = s.subject;
+    r.raw_text = s.rawText;  // the user's English becomes the alert phrase
+    r.zone_id = s.zoneLabel.empty() ? "any" : s.zoneLabel;
+    r.time_window = TimeWindow{s.startMin, s.endMin};
+    r.cooldown_s = 15;
     r.actions = {Action{ActionType::Ntfy, "nightjar"}};
-    if (trigger == "loiter") {
-        r.id = "loiter";
-        r.raw_text = "tell me if a " + subject + " loiters in the backyard";
-        r.trigger = Trigger::Sustained;
-        r.dwell_s = 3;
-    } else {
-        r.id = "appears";
-        r.raw_text = "notify me if a " + subject + " appears in the backyard";
-        r.trigger = Trigger::Appears;
-    }
+    if (s.trigger == "loiter") { r.trigger = Trigger::Sustained; r.dwell_s = 3; }
+    else { r.trigger = Trigger::Appears; }
     return r;
 }
 
-PipelineConfig make_cfg(const std::string& subject) {
+// Union of the armed rules' subjects (one focused question each) + the zone
+// label for the alert phrase.
+PipelineConfig make_cfg(const std::vector<RuleSpec>& specs) {
     PipelineConfig cfg;
-    cfg.predicates = {{subject, "Is there a " + subject + " in this image? Answer y or n."}};
+    std::set<std::string> seen;
+    std::string zone = "any";
+    for (const auto& s : specs) {
+        if (seen.insert(s.subject).second)
+            cfg.predicates.push_back({s.subject, "Is there a " + s.subject + " in this image? Answer y or n."});
+        if (zone == "any" && !s.zoneLabel.empty() && s.zoneLabel != "any") zone = s.zoneLabel;
+    }
+    if (cfg.predicates.empty())
+        cfg.predicates.push_back({"person", "Is there a person in this image? Answer y or n."});
+    cfg.default_zone = zone;
     return cfg;
 }
 
@@ -108,21 +132,20 @@ struct LiveEngine {
     TemporalRuleEngine rules;
     BlockSink sink;
     Telemetry tel;
-    MotionGate overlay_gate;
     ZonePoly zone;
     int zgw = -1, zgh = -1;
     Pipeline pipe;
 
-    // vlm is borrowed (owned by the bridge, reused across guard sessions so the
-    // model loads only once).
-    LiveEngine(const std::string& subject, const std::string& trig, IPredicateVlm* vlm,
-               void (^onAlert)(NSString*), ZonePoly z)
+    // vlm is borrowed (owned by the bridge, reused across sessions). Real clock
+    // (Pipeline default) so time windows like "after 10 pm" are enforced.
+    LiveEngine(const std::vector<RuleSpec>& specs, IPredicateVlm* vlm,
+               void (^onAlert)(NSString*, NSString*, NSString*), ZonePoly z)
         : sink(onAlert),
-          overlay_gate(GateConfig{}),
           zone(std::move(z)),
-          pipe(make_cfg(subject), &rules, vlm, &sink, &tel) {
-        rules.set_rules({rule_for(subject, trig)});
-        pipe.set_clock([] { return Clock{12 * 60, (int64_t)std::time(nullptr)}; });
+          pipe(make_cfg(specs), &rules, vlm, &sink, &tel) {
+        std::vector<TemporalRule> trs;
+        for (const auto& s : specs) trs.push_back(rule_for(s));
+        rules.set_rules(std::move(trs));
         pipe.start();
     }
     ~LiveEngine() { pipe.stop(); }
@@ -130,24 +153,15 @@ struct LiveEngine {
     NJStats process(const FrameView& fv) {
         if (zone.size() >= 3) {
             int gw = fv.width / 16, gh = fv.height / 16;
-            if (gw != zgw || gh != zgh) {  // rasterize once per frame geometry
-                zgw = gw; zgh = gh;
-                BlockBitmap m = rasterize_zone(zone, fv.width, fv.height);
-                overlay_gate.set_zone_mask(m);
-                pipe.set_zone_mask(m);
-            }
+            if (gw != zgw || gh != zgh) { zgw = gw; zgh = gh; pipe.set_zone_mask(rasterize_zone(zone, fv.width, fv.height)); }
         }
-        GateResult g = overlay_gate.evaluate(fv);
-        pipe.on_frame(fv);
+        GateResult g = pipe.on_frame(fv);  // one gate; returns the result for the live box
         Report rep = tel.make_report();
         auto seg = [&](Segment s) { return rep.segments[(size_t)s]; };
         auto cnt = [&](Counter c) { return rep.counters[(size_t)c]; };
-        int captured = (int)cnt(Counter::FramesCaptured);
-        int gated = (int)cnt(Counter::FramesGated);
         NJStats st{};
-        st.framesProcessed = captured;
-        st.framesGated = gated;
-        st.framesSkippedPct = captured > 0 ? (int)std::lround(100.0 * (captured - gated) / captured) : 0;
+        st.framesProcessed = (int)cnt(Counter::FramesCaptured);
+        st.framesGated = (int)cnt(Counter::FramesGated);
         st.vlmChecks = (int)cnt(Counter::VlmInferences);
         st.conflationDrops = (int)cnt(Counter::ConflationDrops);
         st.eventToAlertMs = seg(Segment::EndToEnd).p50;
@@ -213,6 +227,8 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
 
 @implementation NJParsedRule
 @end
+@implementation NJRuleSpec
+@end
 
 @implementation NightjarEngine {
     std::unique_ptr<LiveEngine> _engine;
@@ -221,7 +237,7 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     uint64_t _seq;
     void (^_onStats)(NJStats);
     ZonePoly _zone;
-    std::string _subject;
+    NSArray<NJRuleSpec*>* _rules;
     std::shared_ptr<IPredicateVlm> _vlm;  // loaded once, reused across sessions
     NSString* _vlmName;
     std::mutex _frameMu;
@@ -253,8 +269,28 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     return out;
 }
 
-- (void)setSubject:(NSString*)subjectKey {
-    _subject = subjectKey.length ? subjectKey.UTF8String : "person";
+- (void)setRules:(NSArray<NJRuleSpec*>*)rules {
+    _rules = [rules copy];
+}
+
+- (std::vector<RuleSpec>)buildSpecs {
+    std::vector<RuleSpec> specs;
+    for (NJRuleSpec* r in _rules) {
+        RuleSpec s;
+        s.id = r.ruleId.length ? r.ruleId.UTF8String : "rule";
+        s.rawText = r.rawText.length ? r.rawText.UTF8String : "a person appears";
+        s.subject = r.subjectKey.length ? r.subjectKey.UTF8String : "person";
+        s.trigger = r.trigger.length ? r.trigger.UTF8String : "appears";
+        s.zoneLabel = r.zoneLabel.length ? r.zoneLabel.UTF8String : "any";
+        s.startMin = r.startMinute;
+        s.endMin = r.endMinute;
+        specs.push_back(s);
+    }
+    if (specs.empty()) {  // safety: never run with zero rules
+        RuleSpec s; s.id = "default"; s.rawText = "a person appears"; s.subject = "person";
+        s.trigger = "appears"; s.zoneLabel = "any"; specs.push_back(s);
+    }
+    return specs;
 }
 
 - (NSString*)tier2Name {
@@ -301,13 +337,11 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     }
 }
 
-- (void)startCameraWithTrigger:(NSString*)trigger
-                       onStats:(void (^)(NJStats))onStats
-                       onAlert:(void (^)(NSString*))onAlert {
+- (void)startCameraOnStats:(void (^)(NJStats))onStats
+                       onAlert:(void (^)(NSString*, NSString*, NSString*))onAlert {
     [self stop];
-    if (_subject.empty()) _subject = "person";
     [self ensureVlm];
-    _engine = std::make_unique<LiveEngine>(_subject, trigger ? trigger.UTF8String : "appears", _vlm.get(), onAlert, _zone);
+    _engine = std::make_unique<LiveEngine>([self buildSpecs], _vlm.get(), onAlert, _zone);
     _onStats = [onStats copy];
     _seq = 0;
 }
@@ -337,13 +371,11 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     if (cb) dispatch_async(dispatch_get_main_queue(), ^{ cb(st); });
 }
 
-- (void)startSyntheticWithTrigger:(NSString*)trigger
-                          onFrame:(void (^)(CGImageRef, NJStats))onFrame
-                          onAlert:(void (^)(NSString*))onAlert {
+- (void)startSyntheticOnFrame:(void (^)(CGImageRef, NJStats))onFrame
+                          onAlert:(void (^)(NSString*, NSString*, NSString*))onAlert {
     [self stop];
-    if (_subject.empty()) _subject = "person";
     [self ensureVlm];
-    _engine = std::make_unique<LiveEngine>(_subject, trigger ? trigger.UTF8String : "appears", _vlm.get(), onAlert, _zone);
+    _engine = std::make_unique<LiveEngine>([self buildSpecs], _vlm.get(), onAlert, _zone);
     _running = true;
     std::atomic<bool>* running = &_running;
     LiveEngine* eng = _engine.get();
@@ -389,19 +421,28 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
                                @"yard": @"Yard", @"street": @"Street"};
     for (NSString* k in zoneKeys) if ([s containsString:k]) { where = zoneName[k]; break; }
 
+    // time window (minutes since midnight; start==end => always active)
     NSString* when = @"Anytime";
-    if (contains_any(s, @[@"night", @"after dark", @"overnight"])) when = @"10 PM – 6 AM";
+    int startMin = 0, endMin = 0;
+    if (contains_any(s, @[@"night", @"after dark", @"overnight"])) { when = @"10 PM – 6 AM"; startMin = 22 * 60; endMin = 6 * 60; }
     NSRegularExpression* re = [NSRegularExpression regularExpressionWithPattern:@"after\\s*(\\d{1,2})\\s*(am|pm)"
                                                                        options:NSRegularExpressionCaseInsensitive error:nil];
     NSTextCheckingResult* m = [re firstMatchInString:s options:0 range:NSMakeRange(0, s.length)];
-    if (m) when = [NSString stringWithFormat:@"After %@ %@", [s substringWithRange:[m rangeAtIndex:1]],
-                                             [[s substringWithRange:[m rangeAtIndex:2]] uppercaseString]];
+    if (m) {
+        int hour = [[s substringWithRange:[m rangeAtIndex:1]] intValue] % 12;
+        NSString* ap = [[s substringWithRange:[m rangeAtIndex:2]] uppercaseString];
+        if ([ap isEqualToString:@"PM"]) hour += 12;
+        when = [NSString stringWithFormat:@"After %d %@", ([[s substringWithRange:[m rangeAtIndex:1]] intValue]), ap];
+        startMin = hour * 60; endMin = 6 * 60;  // active from then through the night
+    }
 
     r.who = who;
     r.subjectKey = subjectKey;
     r.where = where;
     r.when = when;
-    r.then = @"Ping your phone + photo";
+    r.startMinute = startMin;
+    r.endMinute = endMin;
+    r.action = @"Notify";  // this build notifies on-device; no external actions are configured
     r.trigger = trig;
     NSString* verb = [trig isEqualToString:@"loiter"] ? @"loitering" : @"appears";
     r.title = [NSString stringWithFormat:@"%@ %@ · %@", who, verb, where];

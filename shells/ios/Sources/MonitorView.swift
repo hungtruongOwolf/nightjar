@@ -59,7 +59,7 @@ struct MonitorView: View {
                         Row(k: "Data leaving device", v: "none", vColor: NW.green)
                     }.padding(16).background(NW.card).cornerRadius(16)
 
-                    Text("The endurance number is measured, not assumed: it projects from the actual battery drain since you armed the guard (a few minutes to settle). The cheap NEON gate skipping most frames is why that number is long — that's the perf-per-watt lever.")
+                    Text("Runtime uses the OS battery estimate (calibrated to the whole machine). The cheap NEON gate skipping most frames is what keeps Nightjar's own draw low — that's the perf-per-watt lever, shown as compute avoided above.")
                         .font(.system(size: 12)).lineSpacing(3).foregroundColor(NW.muted(0.5))
 
                     if driver.tier2.hasPrefix("Smol") {

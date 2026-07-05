@@ -97,7 +97,7 @@ void Pipeline::stop() {
 
 void Pipeline::set_zone_mask(BlockBitmap mask) { gate_.set_zone_mask(std::move(mask)); }
 
-void Pipeline::on_frame(const FrameView& frame) {
+GateResult Pipeline::on_frame(const FrameView& frame) {
     const uint64_t seq = frame.seq;
     tel_->stamp(Stage::Capture, seq, frame.ts_mono_ns);
     tel_->counter(Counter::FramesCaptured);
@@ -113,13 +113,14 @@ void Pipeline::on_frame(const FrameView& frame) {
     tel_->finalize(seq);  // records gate_cost
 
     auto candidate = selector_.offer(frame, gate, now_ns());
-    if (!candidate) return;
+    if (!candidate) return gate;
 
     const uint64_t ev = next_event_id_.fetch_add(1);
     candidate->event_id = ev;
     tel_->stamp(Stage::Capture, ev, candidate->ts_mono_ns);
     tel_->stamp(Stage::CandidatePublish, ev, now_ns());
     slot_.publish(std::move(*candidate));
+    return gate;
 }
 
 void Pipeline::vlm_loop() {

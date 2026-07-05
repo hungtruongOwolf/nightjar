@@ -31,6 +31,7 @@ final class EngineDriver: ObservableObject {
     private var synthRing: [CGImage] = []
     private var batTimer: Timer?
     private var batStart: (Date, Int)?
+    private var ruleMeta: [String: RuleItem] = [:]  // ruleId -> the rule, to tag evidence
 
     func windowed(minutes: Double) -> WindowStats {
         let cutoff = Date().addingTimeInterval(-minutes * 60)
@@ -52,27 +53,33 @@ final class EngineDriver: ObservableObject {
         samples.removeAll { $0.t < cutoff }
     }
 
-    func start(trigger: String, subject: String, zone: [CGPoint]) {
+    func start(rules: [RuleItem], zone: [CGPoint]) {
         alertText = nil; samples.removeAll(); synthRing.removeAll()
-        engine.setSubject(subject)
+        let armed = rules.filter { $0.on }
+        ruleMeta = Dictionary(armed.map { ($0.id.uuidString, $0) }, uniquingKeysWith: { a, _ in a })
+        engine.setRules(armed.map { r in
+            let s = NJRuleSpec()
+            s.ruleId = r.id.uuidString; s.rawText = r.rawText
+            s.subjectKey = r.subject; s.trigger = r.trigger ?? "appears"
+            s.zoneLabel = r.zoneLabel; s.startMinute = Int32(r.startMin); s.endMinute = Int32(r.endMin)
+            return s
+        })
         engine.setZonePolygon(zone.isEmpty ? [] : zone.map(njPoint))
         startBattery()
+        let onAlert: (String, String, String) -> Void = { [weak self] t, rid, subj in self?.record(t, ruleId: rid, subject: subj) }
         if CameraCapture.hasCamera {
             usingCamera = true
             loading = true
             DispatchQueue.global(qos: .userInitiated).async {  // load the VLM off-main
-                self.engine.startCamera(withTrigger: trigger,
-                                        onStats: { [weak self] s in self?.ingest(s) },
-                                        onAlert: { [weak self] t in self?.record(t) })
+                self.engine.startCamera(onStats: { [weak self] s in self?.ingest(s) }, onAlert: onAlert)
                 self.camera.start()
                 let name = self.engine.tier2Name()
                 DispatchQueue.main.async { self.tier2 = name; self.loading = false }
             }
         } else {
             usingCamera = false
-            engine.startSynthetic(withTrigger: trigger,
-                                  onFrame: { [weak self] img, s in self?.frame = img; self?.pushSynth(img); self?.ingest(s) },
-                                  onAlert: { [weak self] t in self?.record(t) })
+            engine.startSynthetic(onFrame: { [weak self] img, s in self?.frame = img; self?.pushSynth(img); self?.ingest(s) },
+                                  onAlert: onAlert)
             tier2 = engine.tier2Name()
         }
     }
@@ -83,16 +90,21 @@ final class EngineDriver: ObservableObject {
         synthRing.append(img); if synthRing.count > 48 { synthRing.removeFirst() }
     }
 
-    // Each alert keeps the photo AND a short event clip (last ~2s). Evidence
-    // stays on-device (the engine's EventClipStore is the fuller on-disk clip).
-    private func record(_ text: String) {
+    // Each alert keeps the photo, and a short clip only if the rule asked for
+    // one. Tagged with the rule that fired so evidence is classified. Stays
+    // on-device (the engine's EventClipStore is the fuller on-disk clip).
+    private func record(_ text: String, ruleId: String, subject: String) {
         alertText = text
+        let meta = ruleMeta[ruleId]
         let img: CGImage? = usingCamera ? engine.currentSnapshotCopy() : frame
-        let clip: [CGImage] = usingCamera
-            ? ((engine.recentClipFrames() as? [Any])?.map { $0 as! CGImage } ?? [])
-            : subsample(synthRing, 24)
-        alerts.insert(AlertRecord(text: text, image: img, frames: clip, date: Date()), at: 0)
-        if alerts.count > 12 { alerts.removeLast() }  // clips hold frames — cap memory
+        var clip: [CGImage] = []
+        if meta?.captureVideo ?? true {
+            clip = usingCamera ? ((engine.recentClipFrames() as? [Any])?.map { $0 as! CGImage } ?? [])
+                               : subsample(synthRing, 24)
+        }
+        alerts.insert(AlertRecord(text: text, ruleTitle: meta?.title ?? text, subject: subject,
+                                  image: img, frames: clip, date: Date()), at: 0)
+        if alerts.count > 12 { alerts.removeLast() }
     }
 
     private func startBattery() {
@@ -106,17 +118,24 @@ final class EngineDriver: ObservableObject {
     private func tickBattery() {
         let b = Battery.read(); battery = b
         if b.charging { enduranceText = "on power (endurance is measured on battery)"; return }
+        // Prefer the OS time-to-empty — it's calibrated to the whole machine and
+        // is the honest number. (macOS provides it; it may say "measuring…" for
+        // the first minute after unplugging.)
+        if let sys = b.systemHoursRemaining, sys > 0 {
+            enduranceText = String(format: "~%.1f h left (system estimate)", sys)
+            return
+        }
+        // Fallback (iOS, no OS estimate): our own drain, but only over a LONG,
+        // stable window so startup spikes don't produce a silly number.
         if let (t0, p0) = batStart, b.percent >= 0 {
             let hrs = Date().timeIntervalSince(t0) / 3600
             let drop = Double(p0 - b.percent)
-            if hrs > 0.03 && drop >= 1 {
-                let remain = Double(b.percent) / (drop / hrs)
-                enduranceText = String(format: "~%.1f h left at this rate", remain)
+            if hrs >= 0.17 && drop >= 2 {  // ≥10 min and ≥2% drop
+                enduranceText = String(format: "~%.1f h left at this rate", Double(b.percent) / (drop / hrs))
                 return
             }
         }
-        if let sys = b.systemHoursRemaining { enduranceText = String(format: "~%.1f h left (system est.)", sys) }
-        else { enduranceText = "measuring…" }
+        enduranceText = "measuring…"
     }
 }
 
@@ -125,6 +144,12 @@ private func subsample(_ a: [CGImage], _ n: Int) -> [CGImage] {
     let step = max(a.count / n, 1)
     return stride(from: 0, to: a.count, by: step).map { a[$0] }
 }
+
+#if os(macOS)
+let deviceWord = "Mac"
+#else
+let deviceWord = "phone"
+#endif
 
 // NSValue(CGPoint) differs between iOS and macOS.
 func njPoint(_ p: CGPoint) -> NSValue {
@@ -137,11 +162,11 @@ func njPoint(_ p: CGPoint) -> NSValue {
 
 struct GuardView: View {
     @ObservedObject var driver: EngineDriver
-    let trigger: String
-    var subject: String = "person"
-    let armedCount: Int
+    var rules: [RuleItem] = []
     var zone: [CGPoint] = []
     let onExit: () -> Void
+
+    private var armedCount: Int { rules.filter { $0.on }.count }
 
     @State private var since = Date()
     @State private var showAlert = false
@@ -159,7 +184,7 @@ struct GuardView: View {
             if showAlert { alertOverlay }
         }
         .onAppear {
-            driver.start(trigger: trigger, subject: subject, zone: zone); since = Date()
+            driver.start(rules: rules, zone: zone); since = Date()
             // Screenshot hook: NJ_OPEN=monitor|alerts auto-opens that sheet.
             if let o = ProcessInfo.processInfo.environment["NJ_OPEN"] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 18) {
@@ -198,7 +223,7 @@ struct GuardView: View {
                     HStack {
                         HStack(spacing: 8) {
                             BlinkDot(color: NW.rose)
-                            Text("LIVE · frames stay on this phone").font(.system(size: 11.5, weight: .semibold)).foregroundColor(NW.creamDim)
+                            Text("LIVE · frames stay on this \(deviceWord)").font(.system(size: 11.5, weight: .semibold)).foregroundColor(NW.creamDim)
                         }.padding(.horizontal, 13).padding(.vertical, 7).background(Color.black.opacity(0.78)).clipShape(Capsule())
                         Spacer()
                         ClockText().padding(.horizontal, 11).padding(.vertical, 7).background(Color.black.opacity(0.78)).clipShape(Capsule())
@@ -264,17 +289,17 @@ struct GuardView: View {
                             OttoOwl(size: 30, alert: true, bodyColor: .white, showBelly: false) }
                         VStack(alignment: .leading, spacing: 2) {
                             HStack { Text("Nightjar").font(.system(size: 13, weight: .semibold)).foregroundColor(NW.cream); Spacer(); Text("now").font(.system(size: 11)).foregroundColor(NW.muted(0.45)) }
-                            Text((driver.alertText ?? "") + " · Photo attached.").font(.system(size: 13)).foregroundColor(NW.muted(0.85)).lineLimit(2)
+                            Text(driver.alertText ?? "").font(.system(size: 13)).foregroundColor(NW.muted(0.85)).lineLimit(2)
                         }
-                        RoundedRectangle(cornerRadius: 10).fill(NW.rose.opacity(0.25)).frame(width: 46, height: 46)
+                        if let img = driver.alerts.first?.image {
+                            Image(decorative: img, scale: 1).resizable().aspectRatio(contentMode: .fill)
+                                .frame(width: 46, height: 46).clipShape(RoundedRectangle(cornerRadius: 10))
+                        } else {
+                            RoundedRectangle(cornerRadius: 10).fill(NW.rose.opacity(0.25)).frame(width: 46, height: 46)
+                        }
                     }.padding(13).background(NW.card.opacity(0.97)).cornerRadius(20)
                         .overlay(RoundedRectangle(cornerRadius: 20).stroke(NW.muted(0.12)))
                         .shadow(color: .black.opacity(0.6), radius: 20, y: 16)
-                    HStack(spacing: 9) {
-                        Circle().fill(Color(hex: 0xFACC15)).frame(width: 7, height: 7)
-                        Text("Porch light switched on via Home Assistant").font(.system(size: 12)).foregroundColor(NW.muted(0.7))
-                        Spacer()
-                    }.padding(.horizontal, 14).padding(.vertical, 10).background(NW.card.opacity(0.94)).cornerRadius(14)
                 }.padding(.horizontal, 12).padding(.top, 58)
                 Spacer()
             }

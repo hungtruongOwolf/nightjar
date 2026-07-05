@@ -9,6 +9,11 @@ struct RuleItem: Identifiable {
     var icon: String
     var trigger: String?
     var subject: String = "person"
+    var rawText: String = ""        // the user's English → the alert phrase
+    var zoneLabel: String = "any"
+    var startMin: Int = 0           // time window; startMin == endMin => always
+    var endMin: Int = 0
+    var captureVideo: Bool = true   // save a clip vs a single photo
     var on: Bool
 }
 
@@ -17,9 +22,12 @@ struct ContentView: View {
     @State private var ruleText: String
     @State private var parsed: NJParsedRule?
     @State private var zonePolygon: [CGPoint] = []
+    @State private var captureVideo = true
     @StateObject private var driver = EngineDriver()
     @State private var rules: [RuleItem] = [
-        .init(title: "Person appears in the backyard", sub: "10 PM – 6 AM · Notify + photo", icon: "figure.walk", trigger: "appears", subject: "person", on: true),
+        .init(title: "A person appears · Backyard", sub: "Anytime · Notify", icon: "figure.walk",
+              trigger: "appears", subject: "person", rawText: "a person appears in the backyard",
+              zoneLabel: "Backyard", on: true),
     ]
 
     init() {
@@ -38,10 +46,6 @@ struct ContentView: View {
         }
     }
 
-    private var activeRule: RuleItem? { rules.first(where: { $0.on && $0.trigger != nil }) }
-    private var activeTrigger: String { activeRule?.trigger ?? "appears" }
-    private var activeSubject: String { activeRule?.subject ?? "person" }
-
     var body: some View {
         ZStack {
             NW.screen.ignoresSafeArea()
@@ -53,7 +57,7 @@ struct ContentView: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .confirm:
                 ConfirmView(ruleText: ruleText, parsed: parsed ?? NightjarEngine.compileRule(ruleText),
-                            onRewrite: { go(.chat) }, onConfirm: { go(.zone) })
+                            captureVideo: $captureVideo, onRewrite: { go(.chat) }, onConfirm: { go(.zone) })
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .zone:
                 ZoneView(zoneName: (parsed ?? NightjarEngine.compileRule(ruleText)).where,
@@ -63,8 +67,7 @@ struct ContentView: View {
                 RulesView(rules: $rules, onStart: { go(.guarding) }, onAdd: { ruleText = ""; go(.chat) })
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .guarding:
-                GuardView(driver: driver, trigger: activeTrigger, subject: activeSubject,
-                          armedCount: rules.filter { $0.on }.count, zone: zonePolygon, onExit: { go(.rules) })
+                GuardView(driver: driver, rules: rules, zone: zonePolygon, onExit: { go(.rules) })
                     .transition(.opacity)
             }
         }
@@ -85,10 +88,11 @@ struct ContentView: View {
 
     private func addRuleAndGuard() {
         let p = parsed ?? NightjarEngine.compileRule(ruleText)
-        let icon = iconFor(p.subjectKey, trigger: p.trigger)
-        rules.insert(.init(title: p.title, sub: "\(p.when) · \(p.then)", icon: icon, trigger: p.trigger, subject: p.subjectKey, on: true), at: 0)
-        // keep only this newly-armed rule active for a clean demo
-        for i in rules.indices where i != 0 { rules[i].on = false }
+        rules.insert(.init(title: p.title, sub: "\(p.when) · \(p.action)\(captureVideo ? " + clip" : " + photo")",
+                           icon: iconFor(p.subjectKey, trigger: p.trigger), trigger: p.trigger, subject: p.subjectKey,
+                           rawText: ruleText.isEmpty ? p.title : ruleText, zoneLabel: p.where,
+                           startMin: Int(p.startMinute), endMin: Int(p.endMinute), captureVideo: captureVideo, on: true),
+                     at: 0)
         go(.rules)
     }
 }
@@ -165,6 +169,7 @@ struct ChatView: View {
 struct ConfirmView: View {
     let ruleText: String
     let parsed: NJParsedRule
+    @Binding var captureVideo: Bool
     let onRewrite: () -> Void
     let onConfirm: () -> Void
 
@@ -181,12 +186,25 @@ struct ConfirmView: View {
                     Text("Here's my understanding —").font(.system(size: 14.5)).foregroundColor(NW.creamDim)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         chip("WHO", parsed.who); chip("WHERE", parsed.where)
-                        chip("WHEN", parsed.when); chip("THEN", parsed.then)
+                        chip("WHEN", parsed.when); chip("THEN", parsed.action)
                     }
-                    Text("Compiled once, on this phone. Checked in microseconds — no AI at match time.")
+                    Text("Compiled once, on-device. Checked in microseconds — no AI at match time.")
                         .font(.system(size: 12)).foregroundColor(NW.muted(0.4))
                 }.padding(15).background(NW.bubble).clipShape(RoundedCorner(16, corners: [.topLeft, .topRight, .bottomRight]))
                 Spacer(minLength: 8)
+            }
+            // Evidence choice
+            HStack(spacing: 8) {
+                Text("SAVE").font(NW.mono(9)).tracking(1.5).foregroundColor(NW.muted(0.45))
+                ForEach([("Photo", false), ("Video clip", true)], id: \.0) { label, isVid in
+                    Button { captureVideo = isVid } label: {
+                        Text(label).font(.system(size: 12.5, weight: .semibold))
+                            .foregroundColor(captureVideo == isVid ? .white : NW.muted(0.6))
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(captureVideo == isVid ? NW.rose : NW.bubble).cornerRadius(10)
+                    }
+                }
+                Spacer()
             }
             Spacer()
             HStack(spacing: 9) {
