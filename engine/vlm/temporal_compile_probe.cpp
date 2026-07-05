@@ -26,6 +26,7 @@ const char* trig(Trigger t) {
         case Trigger::Appears: return "appears";
         case Trigger::Sustained: return "loiter";
         case Trigger::LeftBehind: return "left_behind";
+        case Trigger::Removed: return "removed";
     }
     return "?";
 }
@@ -56,6 +57,8 @@ int main(int argc, char** argv) {
         {"someone waiting by the gate for a few minutes", "loiter"},
         {"a delivery is dropped off and the courier leaves", "left_behind"},
         {"warn me when an animal gets into the garden", "appears"},
+        {"alert me if someone takes my package from the porch", "removed"},
+        {"tell me if my bike gets stolen from the driveway", "removed"},
     };
 
     int ok = 0;

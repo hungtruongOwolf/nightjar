@@ -4,7 +4,7 @@
 # conditions a detector can't express.
 root ::= "{\"subject\":" ws subject ",\"zone\":" ws zone ",\"trigger\":" ws trigger ",\"dwell_s\":" ws int ",\"start\":" ws time ",\"end\":" ws time ",\"cooldown_s\":" ws int "}"
 subject ::= "\"person\"" | "\"vehicle\"" | "\"animal\"" | "\"package\""
-trigger ::= "\"appears\"" | "\"loiter\"" | "\"left_behind\""
+trigger ::= "\"appears\"" | "\"loiter\"" | "\"left_behind\"" | "\"removed\""
 zone ::= "\"" word "\""
 word ::= [a-z]+
 time ::= "\"" [0-2] [0-9] ":" [0-5] [0-9] "\""

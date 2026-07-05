@@ -102,6 +102,30 @@ void test_left_behind_no_fire_if_object_also_gone() {
 
 // ---- gating ----
 
+// The demo-critical distinction: placing vs taking look identical in one frame,
+// but the object's presence trajectory differs. Same person+object frames, only
+// the object's before/after presence flips the outcome.
+void test_place_vs_take_distinguished() {
+    // TAKE (theft): object present, person arrives, person leaves, object GONE.
+    TemporalRuleEngine take;
+    auto rt = rule("theft", "package", Trigger::Removed);
+    rt.actor_predicate = "person";
+    take.set_rules({rt});
+    take.observe(obs(0, {{"package", true}, {"person", false}}));  // object sitting there
+    take.observe(obs(1, {{"package", true}, {"person", true}}));   // person arrives
+    auto d = take.observe(obs(2, {{"package", false}, {"person", true}}));  // object GONE, person here
+    CHECK_EQ(d.size(), size_t(1));  // theft detected
+
+    // PLACE (delivery): object absent, person arrives WITH it, leaves, object STAYS.
+    TemporalRuleEngine place;
+    auto rp = rule("theft", "package", Trigger::Removed);  // same theft rule
+    place.set_rules({rp});
+    place.observe(obs(0, {{"package", false}, {"person", true}}));  // person arrives
+    place.observe(obs(1, {{"package", true}, {"person", true}}));   // sets object down
+    auto d2 = place.observe(obs(2, {{"package", true}, {"person", false}}));  // leaves, object STAYS
+    CHECK(d2.empty());  // NOT theft — object still present
+}
+
 void test_zone_and_cooldown() {
     TemporalRuleEngine e;
     auto r = rule("r", "person", Trigger::Appears);
@@ -137,6 +161,7 @@ int main() {
     test_left_behind_fires_when_actor_leaves_object();
     test_left_behind_no_fire_if_person_stays();
     test_left_behind_no_fire_if_object_also_gone();
+    test_place_vs_take_distinguished();
     test_zone_and_cooldown();
     test_time_window_gates();
     return njtest::failures() == 0 ? 0 : 1;

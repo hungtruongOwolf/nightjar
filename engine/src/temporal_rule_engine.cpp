@@ -59,8 +59,18 @@ std::vector<AlertDecision> TemporalRuleEngine::observe(const Observation& obs) {
                 if (present) s.object_seen = true;  // object (e.g. package) is here
                 const bool actor = obs.has(rule.actor_predicate);
                 const bool actor_left = s.actor_prev_present && !actor;
-                // Object still present AND the actor just left the scene.
+                // Object still present AND the actor just left => left behind (delivery).
                 fired = s.object_seen && present && actor_left;
+                s.actor_prev_present = actor;
+                break;
+            }
+
+            case Trigger::Removed: {
+                const bool actor = obs.has(rule.actor_predicate);
+                // Object was present last frame and is now gone, with a person
+                // around => it was taken (theft). Distinguished from LeftBehind
+                // purely by the object's present->absent trajectory.
+                fired = s.prev_present && !present && (actor || s.actor_prev_present);
                 s.actor_prev_present = actor;
                 break;
             }
@@ -83,6 +93,9 @@ std::vector<AlertDecision> TemporalRuleEngine::observe(const Observation& obs) {
                 }
                 case Trigger::LeftBehind:
                     d.detail = "object left behind, person gone";
+                    break;
+                case Trigger::Removed:
+                    d.detail = "object taken away";
                     break;
             }
             decisions.push_back(std::move(d));

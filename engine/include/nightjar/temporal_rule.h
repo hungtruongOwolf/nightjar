@@ -13,8 +13,12 @@ namespace nightjar {
 enum class Trigger {
     Appears,     // predicate becomes true (rising edge) — the classic case
     Sustained,   // predicate stays true continuously for >= dwell_s (loitering)
-    LeftBehind,  // object predicate stays present while the actor goes away
-                 // (package dropped, then the person leaves)
+    LeftBehind,  // object appears and STAYS present while the actor leaves
+                 // (package dropped, then the person walks off) — "delivery"
+    Removed,     // object that WAS present goes absent while a person is around
+                 // (something is taken away) — "theft". The mirror of LeftBehind:
+                 // place vs take are distinguished by the object's presence
+                 // trajectory (appears+stays vs was-there+disappears), not one frame.
 };
 
 // A compiled temporal rule. Reuses TimeWindow/Action/cooldown from Rule; adds

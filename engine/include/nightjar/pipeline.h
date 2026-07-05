@@ -14,6 +14,7 @@
 #include "nightjar/frame_view.h"
 #include "nightjar/motion_gate.h"
 #include "nightjar/predicate.h"
+#include "nightjar/predicate_debouncer.h"
 #include "nightjar/predicate_vlm.h"
 #include "nightjar/rule_engine.h"  // Clock, AlertDecision
 #include "nightjar/telemetry.h"
@@ -26,6 +27,7 @@ struct PipelineConfig {
     BestFrameConfig best_frame;
     std::string default_zone = "any";       // zone reported for motion (single zone in v1)
     std::vector<Predicate> predicates;       // union of the active rules' predicates to evaluate
+    DebounceConfig debounce;                 // hysteresis on the noisy per-frame VLM answers
 };
 
 // Wires the whole engine (design doc §4.1). The capture callback runs the cheap
@@ -65,6 +67,7 @@ private:
 
     MotionGate gate_;
     BestFrameSelector selector_;
+    PredicateDebouncer debouncer_;  // smooths VLM answers before the temporal FSM
     ConflatingSlot<CandidateFrame> slot_;
 
     std::thread vlm_thread_;

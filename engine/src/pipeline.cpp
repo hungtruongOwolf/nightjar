@@ -76,7 +76,8 @@ Pipeline::Pipeline(PipelineConfig config, TemporalRuleEngine* rules, IPredicateV
       clips_(clips),
       clock_fn_(real_clock),
       gate_(config_.gate),
-      selector_(config_.best_frame) {}
+      selector_(config_.best_frame),
+      debouncer_(config_.debounce) {}
 
 Pipeline::~Pipeline() { stop(); }
 
@@ -151,7 +152,10 @@ void Pipeline::process_candidate(const CandidateFrame& candidate) {
 
     const Clock now = clock_fn_();
     Observation obs;
-    obs.predicates = facts.answers;
+    // Debounce the noisy per-frame VLM answers before the temporal FSM sees them,
+    // so a single flaky frame can't false-trigger (esp. object present/absent
+    // transitions that drive place-vs-take).
+    obs.predicates = debouncer_.update(facts.answers);
     obs.zone = config_.default_zone;
     obs.minute_of_day = now.minute_of_day;
     obs.unix_s = now.unix_s;

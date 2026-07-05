@@ -124,6 +124,10 @@ std::optional<TemporalRule> RuleCompiler::parse_temporal(const std::string& json
         rule.trigger = Trigger::LeftBehind;
         rule.predicate = *subj;      // the object left behind (e.g. package)
         rule.actor_predicate = "person";
+    } else if (*trig == "removed") {
+        rule.trigger = Trigger::Removed;
+        rule.predicate = *subj;      // the object taken away (theft)
+        rule.actor_predicate = "person";
     } else {
         return std::nullopt;
     }

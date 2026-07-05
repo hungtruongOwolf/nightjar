@@ -33,6 +33,7 @@ add_library(nightjar
   src/scripted_predicate_vlm.cpp
   src/energy_meter.cpp
   src/event_clip_store.cpp
+  src/predicate_debouncer.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
