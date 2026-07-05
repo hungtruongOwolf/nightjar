@@ -94,8 +94,6 @@ if(NIGHTJAR_VLM)
 
   add_executable(rule_gate vlm/rule_gate.cpp)
   target_link_libraries(rule_gate PRIVATE nightjar_text)
-  add_executable(temporal_compile_probe vlm/temporal_compile_probe.cpp)
-  target_link_libraries(temporal_compile_probe PRIVATE nightjar_text)
   add_executable(expr_compile_probe vlm/expr_compile_probe.cpp)
   target_link_libraries(expr_compile_probe PRIVATE nightjar_text)
   add_executable(raw_compile_probe vlm/raw_compile_probe.cpp)
