@@ -1,5 +1,7 @@
 #include "nightjar/best_frame_selector.h"
 
+#include <algorithm>
+
 namespace nightjar {
 
 BestFrameSelector::BestFrameSelector(BestFrameConfig config) : config_(config) {}
@@ -7,18 +9,23 @@ BestFrameSelector::BestFrameSelector(BestFrameConfig config) : config_(config) {
 void BestFrameSelector::update_best(const FrameView& frame, const GateResult& gate) {
     const Rect crop = expand_rect(gate.blob_bbox, config_.crop_margin, frame.width, frame.height);
 
-    // Sharpness of the crop region (in-place on the borrowed plane, stride-aware).
-    const uint8_t* crop_origin =
-        frame.y_plane + static_cast<size_t>(crop.y) * frame.stride + crop.x;
-    const double sharpness =
-        variance_of_laplacian(crop_origin, crop.w, crop.h, frame.stride);
+    // Fast path: copy only the RAW crop (stride-aware), cheap. The expensive
+    // letterbox is deferred to the VLM thread (keeps the tick handler at µs).
+    best_.crop.resize(static_cast<size_t>(crop.w) * crop.h);
+    for (int r = 0; r < crop.h; ++r) {
+        const uint8_t* src = frame.y_plane + static_cast<size_t>(crop.y + r) * frame.stride + crop.x;
+        std::copy(src, src + crop.w, best_.crop.begin() + static_cast<size_t>(r) * crop.w);
+    }
+    best_.crop_w = crop.w;
+    best_.crop_h = crop.h;
 
-    best_.image = crop_and_letterbox(frame.y_plane, frame.width, frame.height, frame.stride, crop,
-                                     config_.letterbox_size);
+    // Sharpness on the copied crop (single pass, no resize — stays cheap).
+    best_.sharpness = variance_of_laplacian(best_.crop.data(), crop.w, crop.h, crop.w);
+
+    best_.image = Letterboxed{};  // filled later, off the fast path
     best_.source_bbox = gate.blob_bbox;
     best_.seq = frame.seq;
     best_.ts_mono_ns = frame.ts_mono_ns;  // capture time (t0), for end-to-end latency
-    best_.sharpness = sharpness;
     best_area_ = gate.blob_area_blocks;
     have_best_ = true;
 }

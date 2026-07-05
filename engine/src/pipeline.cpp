@@ -109,9 +109,14 @@ void Pipeline::process_candidate(const CandidateFrame& candidate) {
     const uint64_t ev = candidate.event_id;
     tel_->counter(Counter::VlmInferences);
 
+    // Letterbox the raw crop HERE, on the VLM thread — off the capture fast path.
+    CandidateFrame c = candidate;
+    c.image = crop_and_letterbox(c.crop.data(), c.crop_w, c.crop_h, c.crop_w,
+                                 Rect{0, 0, c.crop_w, c.crop_h}, config_.best_frame.letterbox_size);
+
     const uint64_t t_start = now_ns();
     tel_->stamp(Stage::VlmStart, ev, t_start);
-    const PredicateResult facts = vlm_->evaluate(candidate, config_.predicates);
+    const PredicateResult facts = vlm_->evaluate(c, config_.predicates);
     const uint64_t t_decode = now_ns();
 
     const uint64_t enc_ns = t_start + static_cast<uint64_t>(facts.encode_ms * 1e6);
@@ -136,7 +141,7 @@ void Pipeline::process_candidate(const CandidateFrame& candidate) {
         alert.subject = d.subject;
         alert.one_liner = one_liner(d, config_.default_zone, now.minute_of_day);
         alert.unix_s = now.unix_s;
-        alert.image = candidate.image;
+        alert.image = c.image;
         sink_->send(alert);
         tel_->counter(Counter::AlertsFired);
     }

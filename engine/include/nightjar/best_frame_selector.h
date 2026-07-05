@@ -17,15 +17,20 @@ struct BestFrameConfig {
     double early_exit_min_sharpness = 50.0; // ...and this sharp [tune in KT2 with clips]
 };
 
-// The candidate frame handed to the VLM.
+// The candidate frame handed to the VLM. The selector copies only the RAW crop
+// on the fast (capture) path — cheap; the expensive letterbox to `image` is done
+// later on the VLM thread (Pipeline), keeping the tick handler at microseconds.
 struct CandidateFrame {
-    Letterboxed image;        // letterbox_size × letterbox_size grayscale
-    Rect source_bbox;         // motion bbox in original frame coordinates
-    uint64_t seq = 0;         // source frame seq (best frame chosen)
-    uint64_t ts_mono_ns = 0;  // capture time (t0) of the chosen frame
-    uint64_t event_id = 0;    // assigned by the pipeline for telemetry correlation
+    std::vector<uint8_t> crop;  // raw grayscale crop (crop_w × crop_h), filled on the fast path
+    int crop_w = 0;
+    int crop_h = 0;
+    Letterboxed image;          // letterbox_size square — filled on the VLM thread, off the fast path
+    Rect source_bbox;           // motion bbox in original frame coordinates
+    uint64_t seq = 0;
+    uint64_t ts_mono_ns = 0;    // capture time (t0) of the chosen frame
+    uint64_t event_id = 0;      // assigned by the pipeline for telemetry correlation
     double sharpness = 0.0;
-    bool early_exit = false;  // published early (good enough) vs at window close
+    bool early_exit = false;    // published early (good enough) vs at window close
 };
 
 // Picks the frame to send to the VLM once the gate reports motion (design doc

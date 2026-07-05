@@ -56,7 +56,8 @@ void test_early_exit_on_big_sharp_blob() {
     auto c = sel.offer(view_of(f, 5), motion(4, Rect{16, 16, 64, 64}), 100 * ms);
     CHECK(c.has_value());
     CHECK(c->early_exit);
-    CHECK_EQ(c->image.size, 448);
+    CHECK(c->crop_w > 0 && c->crop_h > 0);  // raw crop copied on the fast path
+    CHECK(c->image.size == 0);              // letterbox deferred to the VLM thread
     CHECK_EQ(c->source_bbox.w, 64);
     CHECK_EQ(c->seq, uint64_t(5));
     CHECK(c->sharpness > 1.0);
