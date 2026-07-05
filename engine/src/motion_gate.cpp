@@ -87,14 +87,14 @@ GateResult MotionGate::evaluate(const FrameView& frame) {
     GateResult result;
     result.fg_ratio = zone_blocks > 0 ? static_cast<float>(active_count) / zone_blocks : 0.0f;
 
-    // Step 4 — global-illumination suppressor: a change spread across most of
+    // Step 4, global-illumination suppressor: a change spread across most of
     // the frame is a lighting shift, not an intruder. Suppress it.
     if (zone_blocks > 0 && result.fg_ratio > config_.global_change_ratio) {
         result.suppressed_global = true;
         return result;
     }
 
-    // Step 5 — largest connected active blob (4-connectivity flood fill on the
+    // Step 5, largest connected active blob (4-connectivity flood fill on the
     // small grid; scalar by design). Motion iff it clears min_blocks_connected.
     std::fill(visited_.begin(), visited_.end(), 0);
     std::vector<int> stack;

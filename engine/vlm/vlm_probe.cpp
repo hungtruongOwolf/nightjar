@@ -1,4 +1,4 @@
-// vlm_probe — run the real mtmd VLM worker on one PGM image and print Facts +
+// vlm_probe, run the real mtmd VLM worker on one PGM image and print Facts +
 // the encode/prefill/decode split. Verifies on-device inference works before
 // wiring it into the pipeline. Usage:
 //   vlm_probe <model.gguf> <mmproj.gguf> <image.pgm>

@@ -25,7 +25,7 @@ bool TemporalRuleEngine::passes_gates(const TemporalRule& rule, const Observatio
                                       State& state) {
     if (rule.zone_id != "any" && rule.zone_id != obs.zone) return false;
     if (!rule.time_window.contains(obs.minute_of_day)) return false;
-    // Cooldown (skip the check if never fired — avoids INT64_MIN underflow).
+    // Cooldown (skip the check if never fired, avoids INT64_MIN underflow).
     const bool ever_fired = state.last_fired_s != std::numeric_limits<int64_t>::min();
     if (ever_fired && obs.unix_s - state.last_fired_s < rule.cooldown_s) return false;
     state.last_fired_s = obs.unix_s;

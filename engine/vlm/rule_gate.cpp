@@ -1,4 +1,4 @@
-// rule_gate — the week-3 RuleCompiler quality gate (design doc §5.5). Compiles
+// rule_gate, the week-3 RuleCompiler quality gate (design doc §5.5). Compiles
 // all of tests/rules_20.txt with the real local model and checks each result's
 // subject against tests/rules_20_expected.txt. Pass = >= 16/20 subjects correct;
 // a failure activates C6 (load a stronger model like Qwen2.5-1.5B at setup).

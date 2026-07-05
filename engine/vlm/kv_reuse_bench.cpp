@@ -1,4 +1,4 @@
-// kv_reuse_bench — verify + measure the "encode-once, ask-many" optimization.
+// kv_reuse_bench, verify + measure the "encode-once, ask-many" optimization.
 // Runs the same N predicates on one image via the re-encode path and the
 // KV-reuse path, and prints per-mode encode/prefill/decode/total and the
 // answers. Correctness check: the answers must match; speed check: reuse should

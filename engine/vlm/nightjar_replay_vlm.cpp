@@ -1,4 +1,4 @@
-// nightjar_replay_vlm — the real on-device pipeline over a PGM clip: same
+// nightjar_replay_vlm, the real on-device pipeline over a PGM clip: same
 // Pipeline as make demo, but Tier 2 is the actual llama.cpp SmolVLM worker.
 // This is what produces the real report.md for eval clips.
 //   nightjar_replay_vlm <frames_dir> <model.gguf> <mmproj.gguf> [fps]
@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     const double fps = argc > 4 ? std::atof(argv[4]) : 30.0;
     const std::string ntfy_topic = argc > 5 ? argv[5] : "";
 
-    // Loitering: a person sustained in view — a condition a detector can't express.
+    // Loitering: a person sustained in view, a condition a detector can't express.
     TemporalRule r;
     r.id = "loiter-backyard";
     r.raw_text = "tell me if someone loiters in the backyard at night";
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
     }
 #else
     if (!ntfy_topic.empty())
-        std::printf("(built without NIGHTJAR_NET — ntfy topic ignored)\n");
+        std::printf("(built without NIGHTJAR_NET, ntfy topic ignored)\n");
 #endif
 
     Telemetry tel;

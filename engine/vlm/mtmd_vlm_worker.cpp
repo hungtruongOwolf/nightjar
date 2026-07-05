@@ -35,7 +35,7 @@ MtmdVlmWorker::MtmdVlmWorker(const MtmdConfig& config)
     llama_backend_init();
 
     llama_model_params mparams = llama_model_default_params();
-    mparams.n_gpu_layers = 0;  // LLM on CPU — the Arm/KleidiAI story
+    mparams.n_gpu_layers = 0;  // LLM on CPU, the Arm/KleidiAI story
     impl_->model = llama_model_load_from_file(config.model_path.c_str(), mparams);
     if (!impl_->model) {
         error_ = "failed to load model: " + config.model_path;

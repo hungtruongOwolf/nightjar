@@ -25,7 +25,7 @@ Rect expand_rect(Rect r, float margin, int max_w, int max_h);
 Letterboxed crop_and_letterbox(const uint8_t* src, int sw, int sh, int sstride, Rect crop,
                                int size, uint8_t pad = 0);
 
-// Variance of the 3×3 Laplacian response — the standard focus/sharpness score.
+// Variance of the 3×3 Laplacian response, the standard focus/sharpness score.
 // Higher = sharper. A flat image scores 0. Used for best-frame early-exit so we
 // don't hand the VLM a motion-blurred frame.
 double variance_of_laplacian(const uint8_t* gray, int w, int h, int stride);

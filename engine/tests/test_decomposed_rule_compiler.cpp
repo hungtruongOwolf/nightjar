@@ -53,7 +53,7 @@ void test_theft() {
 }
 
 void test_answers_are_trimmed() {
-    // Model returns leading whitespace/newline (common) — must still parse.
+    // Model returns leading whitespace/newline (common), must still parse.
     TextInferFn infer = [](const std::string&, const std::string& g) -> std::string {
         if (g.find("appears") != std::string::npos) return " stays\n";
         if (g.find("person") != std::string::npos) return "\n person ";

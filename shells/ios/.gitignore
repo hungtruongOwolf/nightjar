@@ -1,4 +1,4 @@
-# The Xcode project is generated from project.yml by xcodegen — don't commit it.
+# The Xcode project is generated from project.yml by xcodegen, don't commit it.
 *.xcodeproj
 build/
 DerivedData/

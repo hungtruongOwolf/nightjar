@@ -1,4 +1,4 @@
-# KleidiAI on/off benchmark on Linux aarch64 — the Arm-specific optimization the
+# KleidiAI on/off benchmark on Linux aarch64, the Arm-specific optimization the
 # challenge rewards, measured cleanly (no Apple Accelerate to confound it, unlike
 # on macOS). Builds llama.cpp twice (KleidiAI on vs off) and runs llama-bench on
 # the SmolVLM INT4 model, so the delta is attributable to KleidiAI's Arm kernels.

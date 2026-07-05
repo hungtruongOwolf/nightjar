@@ -1,4 +1,4 @@
-// nightjar_flow — the full product flow in one run: type an English rule, the
+// nightjar_flow, the full product flow in one run: type an English rule, the
 // compiler model (Qwen) turns it into a TemporalRule via decomposition, is then
 // freed, and the runtime (SmolVLM + gate + temporal engine) guards a clip.
 // Mirrors the on-device setup->runtime split (compile once, unload, then run).

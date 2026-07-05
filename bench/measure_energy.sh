@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# measure_energy.sh — perf-per-watt on Apple Silicon via powermetrics idle-delta.
+# measure_energy.sh, perf-per-watt on Apple Silicon via powermetrics idle-delta.
 # Measures quiescent package power, then package power while a workload runs, and
 # reports the net active power + energy. Needs sudo (powermetrics).
 #

@@ -20,7 +20,7 @@ ping me if a vehicle appears in front of the shop between 9am and 6pm
 watch for people at the back entrance during the day
 
 # -- paraphrases that avoid the obvious keyword --
-someone is walking around my backyard late at night — I want to know
+someone is walking around my backyard late at night, I want to know
 a delivery showed up? tell me
 is that a dog in my vegetable patch again? notify me
 somebody parked on my lawn, I want an alert
@@ -31,12 +31,12 @@ tell me any time an animal crosses the porch
 
 # -- explicit cooldown-ish phrasing (compiler may map or default) --
 notify me about people in the yard after 9pm, but not more than once every ten minutes
-if a car stops outside, alert me — no need to repeat for the same car within the hour
+if a car stops outside, alert me, no need to repeat for the same car within the hour
 
 # -- zone wording variety --
 watch the area near the shed for anyone after dark
 if a package is left where I marked, send me a message
 
 # -- tests that the compiler picks ONE subject correctly --
-I care about people, not cats — backyard, after 10
+I care about people, not cats, backyard, after 10
 only vehicles matter for the driveway rule, day or night

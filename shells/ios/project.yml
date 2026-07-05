@@ -1,7 +1,7 @@
 # xcodegen spec for the Nightjar shells. Two thin targets over ONE portable C++
 # engine (../../engine), reached through NightjarEngine (Obj-C++):
-#   • Nightjar     — iOS app  (device camera; Simulator falls back to synthetic)
-#   • NightjarMac  — macOS app (webcam) — test the live guard on the Mac, no cable
+#   • Nightjar    , iOS app  (device camera; Simulator falls back to synthetic)
+#   • NightjarMac , macOS app (webcam), test the live guard on the Mac, no cable
 #
 # Regenerate + build:
 #   xcodegen -s project.yml

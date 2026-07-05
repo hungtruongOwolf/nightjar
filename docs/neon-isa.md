@@ -1,9 +1,9 @@
-# NEON ISA proof — the Tier-1 gate really compiles to Arm SIMD
+# NEON ISA proof, the Tier-1 gate really compiles to Arm SIMD
 
 Nightjar's motion gate is hand-written Arm NEON (with a scalar twin + a parity
-test that asserts `scalar == NEON` — see `engine/tests/test_gate_steps.cpp`).
+test that asserts `scalar == NEON`, see `engine/tests/test_gate_steps.cpp`).
 This is the evidence that it emits the intended Arm SIMD instructions, not just
-autovectorized scalar code — i.e. it genuinely leverages the Arm architecture.
+autovectorized scalar code, i.e. it genuinely leverages the Arm architecture.
 
 ## Intrinsic → emitted Arm instruction
 
@@ -29,7 +29,7 @@ Raw excerpt:
 ```
 
 **294 vector-lane NEON instructions** (`.16b/.8b/.8h/.4s/.2d`) in this one
-object — the gate is doing real SIMD work per frame, which is why it costs
+object, the gate is doing real SIMD work per frame, which is why it costs
 ~0.2 ms/frame while touching every pixel.
 
 ## ISA on the measurement machine (M2 Max)
@@ -55,9 +55,9 @@ sysctl -a | grep 'hw.optional.arm.FEAT'
 
 ## Arm tools & products this project uses (honestly)
 
-- **KleidiAI** — Arm's INT4 matmul micro-kernels (dotprod/i8mm) for Tier-2, via
+- **KleidiAI**, Arm's INT4 matmul micro-kernels (dotprod/i8mm) for Tier-2, via
   llama.cpp; measured on/off in `bench/kleidiai_results.md`.
-- **Arm NEON** — the hand-written Tier-1 gate above; intrinsics referenced
+- **Arm NEON**, the hand-written Tier-1 gate above; intrinsics referenced
   against Arm's **SIMD.info** and verified with **Compiler Explorer** / `otool`.
 - **Arm ISA feature detection** (`FEAT_DotProd/I8MM/...`) at build + runtime.
 - Not used (would be dishonest for an on-device project): the cloud/server tools

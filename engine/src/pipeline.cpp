@@ -48,7 +48,7 @@ std::string one_liner(const AlertDecision& d, const std::string& zone, int minut
 }
 
 // Downscale a (possibly strided) Y-plane into a small GrayImage for the clip
-// ring — nearest-neighbour by an integer factor, cheap enough for the capture
+// ring, nearest-neighbour by an integer factor, cheap enough for the capture
 // thread (no disk here; the clip store's writer does I/O).
 GrayImage downscaled_gray(const FrameView& f, int factor) {
     if (factor < 1) factor = 1;
@@ -137,7 +137,7 @@ void Pipeline::process_candidate(const CandidateFrame& candidate) {
     const uint64_t ev = candidate.event_id;
     tel_->counter(Counter::VlmInferences);
 
-    // Letterbox the raw crop HERE, on the VLM thread — off the capture fast path.
+    // Letterbox the raw crop HERE, on the VLM thread, off the capture fast path.
     CandidateFrame c = candidate;
     c.image = crop_and_letterbox(c.crop.data(), c.crop_w, c.crop_h, c.crop_w,
                                  Rect{0, 0, c.crop_w, c.crop_h}, config_.best_frame.letterbox_size);

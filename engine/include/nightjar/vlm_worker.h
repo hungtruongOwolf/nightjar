@@ -12,7 +12,7 @@ namespace nightjar {
 // The Tier-2 vision-language stage. The real implementation wraps llama.cpp
 // mtmd and links the model; the engine core depends only on this interface so
 // the whole pipeline can be assembled and tested deterministically without the
-// model (and so `make demo` is reproducible on any Mac — judge requirement G5).
+// model (and so `make demo` is reproducible on any Mac, judge requirement G5).
 class IVlmWorker {
 public:
     virtual ~IVlmWorker() = default;

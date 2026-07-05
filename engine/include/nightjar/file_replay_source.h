@@ -21,7 +21,7 @@ struct ReplayConfig {
 // a real camera would. Critically (anti-coordinated-omission, CLAUDE.md §5):
 // the pump never waits for a slow consumer. If a frame's scheduled slot has
 // already passed because on_frame ran long, that frame is DROPPED and counted
-// — the clip plays in real time and a busy system loses frames rather than
+//, the clip plays in real time and a busy system loses frames rather than
 // stretching the timeline. Frames are pre-loaded into memory before the clock
 // starts so disk I/O never pollutes the timing.
 class FileReplaySource : public ICaptureSource {

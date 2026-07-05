@@ -11,7 +11,7 @@ struct BatteryInfo {
     var systemHoursRemaining: Double? = nil  // OS estimate (macOS), whole machine
 }
 
-// Reads the device battery so the Monitor can project endurance — the honest
+// Reads the device battery so the Monitor can project endurance, the honest
 // "how much longer can it guard" number, not a synthetic figure.
 enum Battery {
     static func read() -> BatteryInfo {

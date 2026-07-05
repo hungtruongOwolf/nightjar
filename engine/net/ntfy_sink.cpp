@@ -4,7 +4,7 @@
 
 #include <cstdio>
 
-#include "nightjar/clip_encoder.h"  // encode_gray_png — stb implementation lives in the core
+#include "nightjar/clip_encoder.h"  // encode_gray_png, stb implementation lives in the core
 
 namespace nightjar {
 namespace {

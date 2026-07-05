@@ -27,7 +27,7 @@ struct AlertDecision {
     std::string detail;  // temporal fact for evidence (e.g. "present 92s", "left behind"); optional
 };
 
-// The runtime decision point (design doc §5.5). Plain deterministic code — NO
+// The runtime decision point (design doc §5.5). Plain deterministic code, NO
 // AI here, microsecond-level. Given the VLM's Facts, the zone the motion was
 // in, and the clock, it returns every rule that should fire (respecting each
 // rule's per-rule cooldown). N active rules resolve in one pass.

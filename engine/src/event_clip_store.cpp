@@ -65,7 +65,7 @@ void EventClipStore::flush() {
 }
 
 void EventClipStore::worker_loop() {
-    // All clip state is owned here — no cross-thread sharing beyond the queue.
+    // All clip state is owned here, no cross-thread sharing beyond the queue.
     std::deque<GrayImage> preroll;
     std::deque<std::string> clip_dirs;
     std::string cur_dir;

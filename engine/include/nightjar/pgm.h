@@ -7,7 +7,7 @@
 
 namespace nightjar {
 
-// A decoded 8-bit grayscale image — exactly one luma plane, tightly packed
+// A decoded 8-bit grayscale image, exactly one luma plane, tightly packed
 // (stride == width). PGM is used as the harness frame format because it maps
 // 1:1 onto a Y-plane and needs no video-decode dependency; any clip or image
 // is converted to a PGM sequence offline (ffmpeg/sips).

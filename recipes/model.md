@@ -1,4 +1,4 @@
-# Model recipe — reproducible GGUF setup for Nightjar
+# Model recipe, reproducible GGUF setup for Nightjar
 
 Two models, two jobs. Both run on-device via llama.cpp; the compiler model is
 loaded **only at rule-setup time**, then freed, so it never touches the runtime

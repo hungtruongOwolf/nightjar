@@ -3,7 +3,7 @@
 // Minimal zero-dependency test helper. A test is a plain executable that
 // returns non-zero on failure; CHECK/CHECK_EQ print the failing location and
 // flip a global fail flag. Keeps the repo buildable offline (no GoogleTest
-// fetch) — the whole engine is meant to `cmake && ctest` on a fresh clone.
+// fetch), the whole engine is meant to `cmake && ctest` on a fresh clone.
 
 #include <cstdio>
 #include <cstdlib>

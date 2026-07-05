@@ -1,7 +1,7 @@
-// nightjar_demo — replay a clip through the full engine and print the report.
+// nightjar_demo, replay a clip through the full engine and print the report.
 //
 // Default (--synthetic) generates a self-contained clip where a person lingers
-// in view, and fires a LOITERING rule — a temporal condition a closed-vocab
+// in view, and fires a LOITERING rule, a temporal condition a closed-vocab
 // detector cannot express. Runs on any Mac, no external assets, no model
 // (judge requirement G5); Tier 2 is the deterministic ScriptedPredicateVlm.
 // The real mtmd worker is swapped in on device (see nightjar_replay_vlm).

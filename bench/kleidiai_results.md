@@ -1,8 +1,8 @@
-# KleidiAI on/off — measured
+# KleidiAI on/off, measured
 
 The Arm challenge rewards Arm-specific optimization. llama.cpp's CPU backend can
 use [KleidiAI](https://gitlab.arm.com/kleidi/kleidiai) INT4 matmul micro-kernels
-(dotprod / i8mm). This measures the delta cleanly on **Linux aarch64** — no Apple
+(dotprod / i8mm). This measures the delta cleanly on **Linux aarch64**, no Apple
 Accelerate in the mix to confound the result (as there would be on macOS).
 
 ## How to reproduce
@@ -12,7 +12,7 @@ docker build --platform linux/arm64 -f Dockerfile.kleidiai -t nightjar-kleidiai 
 docker run --rm --platform linux/arm64 -v "$PWD/models:/models" nightjar-kleidiai
 ```
 
-It builds `llama.cpp` twice — `-DGGML_CPU_KLEIDIAI=ON` vs `OFF` — and runs
+It builds `llama.cpp` twice, `-DGGML_CPU_KLEIDIAI=ON` vs `OFF`, and runs
 `llama-bench` on the SmolVLM-500M language model (Q4_0), so the only variable is
 the kernel.
 
@@ -41,5 +41,5 @@ the GBNF-constrained JSON output is only a few dozen decode tokens). Prefill is
 exactly what KleidiAI speeds up.
 
 The definitive per-stage number belongs on **real Arm silicon (iPhone A15)**,
-where KT1 measures encode/prefill/decode separately on device — a virtualized
+where KT1 measures encode/prefill/decode separately on device, a virtualized
 `x`-on-Apple VM is a directional signal, not the headline. Tagged accordingly.

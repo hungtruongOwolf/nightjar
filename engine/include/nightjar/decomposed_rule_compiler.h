@@ -16,7 +16,7 @@ struct CompilerAssets {
 };
 
 // Compiles English into a TemporalRule by DECOMPOSITION: instead of asking the
-// small model to emit a whole nested rule at once (measured unreliable — see
+// small model to emit a whole nested rule at once (measured unreliable, see
 // the negative-result experiment), it asks a few focused CLASSIFICATION
 // questions the model does reliably (each few-shot + GBNF-constrained), and
 // assembles the answers into the rule with deterministic code. The confirmation

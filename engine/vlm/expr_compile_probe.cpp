@@ -1,4 +1,4 @@
-// expr_compile_probe — verify whether the local model can compile plain English
+// expr_compile_probe, verify whether the local model can compile plain English
 // into a composable TEMPORAL-LOGIC expression (not a hardcoded enum trigger).
 // GBNF guarantees valid syntax; this checks semantic quality by eye.
 //   expr_compile_probe <model.gguf> <prompt.txt> <grammar.gbnf>

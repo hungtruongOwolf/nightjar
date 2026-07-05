@@ -4,7 +4,7 @@ import SwiftUI
 struct AlertRecord: Identifiable {
     let id = UUID()
     let text: String
-    let ruleTitle: String        // which rule fired — classifies the evidence
+    let ruleTitle: String        // which rule fired, classifies the evidence
     let subject: String          // person / vehicle / animal / package
     let image: CGImage?
     var frames: [CGImage] = []   // short event clip (empty if the rule saves photo only)
@@ -20,7 +20,7 @@ struct AlertRecord: Identifiable {
     }
 }
 
-// The review screen — tap an alert to see the frame Otto flagged. This is the
+// The review screen, tap an alert to see the frame Otto flagged. This is the
 // app-side view of the evidence; the engine's EventClipStore keeps the fuller
 // pre/post-roll clip on disk (differential-coded).
 struct AlertsView: View {
@@ -48,7 +48,7 @@ struct AlertsView: View {
                     Spacer()
                     VStack(spacing: 10) {
                         OttoOwl(size: 80)
-                        Text("No alerts yet — all quiet.").font(NW.serif(17, italic: true)).foregroundColor(NW.muted(0.55))
+                        Text("No alerts yet, all quiet.").font(NW.serif(17, italic: true)).foregroundColor(NW.muted(0.55))
                     }.frame(maxWidth: .infinity)
                     Spacer()
                 } else {

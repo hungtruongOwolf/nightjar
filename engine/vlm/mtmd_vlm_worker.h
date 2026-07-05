@@ -15,10 +15,10 @@ struct MtmdConfig {
     bool encoder_use_gpu = true;  // KT1: encoder on Metal ~34x faster than CPU
     int n_threads = 0;            // 0 => llama default
     // Encode+prefill the image ONCE and reuse its KV across all predicate
-    // questions (only the short text differs) — the "encode-once, ask-many"
+    // questions (only the short text differs), the "encode-once, ask-many"
     // optimization. Verify empirically (llama.cpp prefix-cache has caveats).
     bool reuse_image_kv = false;
-    // Which subjects to ask about. One focused y/n question per subject — KT1
+    // Which subjects to ask about. One focused y/n question per subject, KT1
     // found the 500M model reliable one-at-a-time (8/9) but noisy when asked
     // about several subjects in a single prompt. Set this to the union of the
     // active rules' subjects so only what's needed is inferred.
@@ -43,7 +43,7 @@ public:
     bool ok() const { return ok_; }              // false if the model failed to load
     const std::string& error() const { return error_; }
 
-    // Predicate path (the product): one focused y/n question per predicate —
+    // Predicate path (the product): one focused y/n question per predicate -
     // KT1 found the small model reliable one-fact-at-a-time. Timings summed.
     PredicateResult evaluate(const CandidateFrame& candidate,
                              const std::vector<Predicate>& predicates) override;

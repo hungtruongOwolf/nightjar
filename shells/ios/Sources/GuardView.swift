@@ -4,7 +4,7 @@ import SwiftUI
 // Owns the live C++ engine + camera, republishes the stream for SwiftUI.
 // Uses the real camera when present (device / Mac webcam); on the Simulator it
 // falls back to the engine's synthetic scene.
-// Rolling-window counts (last N minutes) — the honest "right now" numbers, not
+// Rolling-window counts (last N minutes), the honest "right now" numbers, not
 // a lifetime average that converges to a meaningless constant.
 struct WindowStats {
     var frames = 0, gated = 0, vlm = 0, alerts = 0
@@ -274,7 +274,7 @@ struct GuardView: View {
             Spacer()
             Bob { OttoOwl(size: 110, alert: showAlert) }
             ClockBig().padding(.top, 18)
-            Text("Otto's on watch — screen dimmed to save power.")
+            Text("Otto's on watch, screen dimmed to save power.")
                 .font(NW.serif(16, italic: true)).foregroundColor(NW.muted(0.6)).padding(.top, 12).multilineTextAlignment(.center)
             Text("\(armedCount) armed · all quiet").font(.system(size: 12.5)).foregroundColor(NW.muted(0.4)).padding(.top, 5)
             Spacer()

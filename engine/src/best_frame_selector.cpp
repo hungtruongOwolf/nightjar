@@ -19,7 +19,7 @@ void BestFrameSelector::update_best(const FrameView& frame, const GateResult& ga
     best_.crop_w = crop.w;
     best_.crop_h = crop.h;
 
-    // Sharpness on the copied crop (single pass, no resize — stays cheap).
+    // Sharpness on the copied crop (single pass, no resize, stays cheap).
     best_.sharpness = variance_of_laplacian(best_.crop.data(), crop.w, crop.h, crop.w);
 
     best_.image = Letterboxed{};  // filled later, off the fast path

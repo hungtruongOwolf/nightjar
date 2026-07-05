@@ -11,7 +11,7 @@
 
 namespace nightjar {
 
-// Evaluates temporal rules over a stream of per-frame Observations — plain
+// Evaluates temporal rules over a stream of per-frame Observations, plain
 // deterministic code, NO AI (design principle: no AI at the runtime decision
 // point). The VLM answers per-frame yes/no predicates; this engine integrates
 // them over time into the conditions a detector can't do: rising-edge appears,

@@ -3,7 +3,7 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-// Optional real push to your phone via ntfy.sh — the only thing that ever leaves
+// Optional real push to your phone via ntfy.sh, the only thing that ever leaves
 // the device, and only when you set a topic. Pure URLSession (no engine/network
 // dependency); fire-and-forget so a failed/absent network never affects the
 // guard. Install the free "ntfy" app, subscribe to your topic, and alerts buzz

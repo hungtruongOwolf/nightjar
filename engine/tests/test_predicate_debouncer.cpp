@@ -11,7 +11,7 @@ bool step(PredicateDebouncer& d, bool raw) { return d.update({{"p", raw}})["p"];
 void test_ignores_single_blip() {
     PredicateDebouncer d({/*on*/ 2, /*off*/ 3});
     CHECK(!step(d, false));
-    CHECK(!step(d, true));   // 1 true — not enough (on_streak=2)
+    CHECK(!step(d, true));   // 1 true, not enough (on_streak=2)
     CHECK(!step(d, false));  // blip gone, still off
     CHECK(!step(d, false));
 }
@@ -27,8 +27,8 @@ void test_slow_to_clear() {
     PredicateDebouncer d({2, 3});
     step(d, true);
     step(d, true);  // on now
-    CHECK(step(d, false));  // 1 false — still on (off_streak=3)
-    CHECK(step(d, false));  // 2 — still on
+    CHECK(step(d, false));  // 1 false, still on (off_streak=3)
+    CHECK(step(d, false));  // 2, still on
     CHECK(!step(d, false));  // 3 consecutive false -> off
 }
 

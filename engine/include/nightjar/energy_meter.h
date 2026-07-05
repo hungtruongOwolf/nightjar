@@ -7,7 +7,7 @@
 namespace nightjar {
 
 // Turns a power trace into the perf-per-watt numbers that are Nightjar's Tier-2
-// Arm story: net energy over a run (idle-delta method — the published standard),
+// Arm story: net energy over a run (idle-delta method, the published standard),
 // Joules per VLM inference, and a projection of how long a phone battery would
 // sustain the workload. Power samples come from the platform (powermetrics on
 // Mac, battery deltas on iPhone); this module stays portable and is unit-tested

@@ -16,7 +16,7 @@ namespace nightjar {
 
 struct ClipConfig {
     std::string dir = "clips";   // where event clips are written
-    int max_clips = 50;          // HARD CAP — oldest clips evicted beyond this (bounded storage)
+    int max_clips = 50;          // HARD CAP, oldest clips evicted beyond this (bounded storage)
     int pre_roll_frames = 30;    // frames of context kept before the event (~1s @ 30fps)
     int post_roll_frames = 60;   // frames recorded after the event fires (~2s)
     int queue_max = 240;         // command-queue cap; oldest frame commands dropped if exceeded
@@ -30,7 +30,7 @@ struct ClipConfig {
     bool differential = false;
 };
 
-// Bounded, rotating on-device clip storage — the answer to "camera memory is
+// Bounded, rotating on-device clip storage, the answer to "camera memory is
 // never enough". Never keeps continuous video or a growing database: a small
 // pre-roll ring, and on an event a short clip (pre-roll + post-roll) written to
 // disk, at most `max_clips` (oldest evicted).
@@ -38,7 +38,7 @@ struct ClipConfig {
 // All clip state and disk I/O live on a single owner (a writer thread); the
 // capture and VLM threads only enqueue commands. This keeps the capture fast
 // path free of disk I/O (consistent with the pipeline's microsecond tick
-// handler) — frame commands are best-effort (dropped if the queue is full),
+// handler), frame commands are best-effort (dropped if the queue is full),
 // begin-event commands are never dropped.
 class EventClipStore {
 public:

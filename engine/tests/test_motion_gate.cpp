@@ -114,7 +114,7 @@ void test_zone_mask_excludes_out_of_zone_motion() {
     gate.evaluate(view_of(bg, 0));
 
     auto blob = uniform(50);
-    fill_rect(blob, 0, 0, 32, 32, 240);  // top-left blob — outside the zone
+    fill_rect(blob, 0, 0, 32, 32, 240);  // top-left blob, outside the zone
     GateResult r = gate.evaluate(view_of(blob, 1));
     CHECK(!r.motion);
     CHECK_EQ(r.blob_area_blocks, uint16_t(0));

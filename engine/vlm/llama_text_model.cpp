@@ -17,7 +17,7 @@ LlamaTextModel::LlamaTextModel(const std::string& model_path) {
     llama_backend_init();
 
     llama_model_params mparams = llama_model_default_params();
-    mparams.n_gpu_layers = 0;  // CPU — the Arm/KleidiAI path
+    mparams.n_gpu_layers = 0;  // CPU, the Arm/KleidiAI path
     impl_->model = llama_model_load_from_file(model_path.c_str(), mparams);
     if (!impl_->model) {
         error_ = "failed to load model: " + model_path;

@@ -9,7 +9,7 @@ namespace nightjar {
 // Text-only llama.cpp generation for the RuleCompiler. Loads a GGUF once and
 // generates GBNF-constrained output. The design uses the local model text-only
 // here (no image); if the 20-rule gate fails, the C6 escalation swaps in a
-// stronger model at setup — this class doesn't care which GGUF it loads.
+// stronger model at setup, this class doesn't care which GGUF it loads.
 class LlamaTextModel {
 public:
     explicit LlamaTextModel(const std::string& model_path);

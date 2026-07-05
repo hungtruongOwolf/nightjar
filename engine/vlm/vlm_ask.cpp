@@ -1,4 +1,4 @@
-// vlm_ask — free-form question about a PGM image (relational-reasoning probe).
+// vlm_ask, free-form question about a PGM image (relational-reasoning probe).
 //   vlm_ask <model.gguf> <mmproj.gguf> <image.pgm> "<question>"
 
 #include <cstdio>

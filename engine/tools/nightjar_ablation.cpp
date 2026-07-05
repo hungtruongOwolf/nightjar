@@ -1,4 +1,4 @@
-// nightjar_ablation — quantify the two-tier gate's compute (and hence energy)
+// nightjar_ablation, quantify the two-tier gate's compute (and hence energy)
 // reduction: how many VLM inferences the gate + best-frame selector avoid
 // versus running the VLM on every captured frame. VLM inferences are a faithful
 // energy proxy (each costs ~the same), so this is the core perf-per-watt lever,
@@ -39,7 +39,7 @@ std::vector<uint8_t> frame(bool person) {
             for (int x = 280; x < 390; ++x) px[size_t(y) * W + x] = ((x / 3 + y / 3) & 1) ? 0 : 255;
     return px;
 }
-// A realistic guard clip: mostly quiet, with a couple of brief person events —
+// A realistic guard clip: mostly quiet, with a couple of brief person events -
 // the regime where the gate shines (~1-5% of frames are interesting).
 std::string make_clip() {
     fs::path dir = fs::temp_directory_path() / "nightjar_ablation_clip";

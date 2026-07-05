@@ -66,7 +66,7 @@ private:
     void (^cb_)(NSString*, NSString*, NSString*);
 };
 
-// A rule exactly as the user built it — nothing fabricated.
+// A rule exactly as the user built it, nothing fabricated.
 struct RuleSpec {
     std::string id, rawText, subject, trigger, zoneLabel;
     int startMin = 0, endMin = 0;  // startMin == endMin => always active
@@ -322,7 +322,7 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     }
 #endif
     // Scripted stand-in (Simulator / no model): recognizes "person" only, and is
-    // content-aware — true only when the candidate crop actually has a bright
+    // content-aware, true only when the candidate crop actually has a bright
     // figure. That makes presence go false when the figure leaves, so a rising-
     // edge ("appears") re-arms instead of firing just once per session.
     _vlm = std::make_shared<ScriptedPredicateVlm>(

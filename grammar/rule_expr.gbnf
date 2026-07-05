@@ -1,6 +1,6 @@
 # A tiny composable temporal logic over debounced predicates. The compiler emits
 # ONE expression; a deterministic evaluator runs it. GBNF guarantees the syntax
-# is always valid — only semantics are up to the model. Depth-2 (a composite of
+# is always valid, only semantics are up to the model. Depth-2 (a composite of
 # simple terms) keeps it bounded and safe, and covers loiter/theft/left-behind/
 # sequence without hardcoding a trigger per situation.
 root ::= composite | simple

@@ -5,7 +5,7 @@ import llama
 /// repeated single-image inferences with the per-stage timing split the
 /// design doc mandates: encode_ms / prefill_ms / decode_ms.
 ///
-/// Deliberately NOT the production VlmWorker — this exists to produce the
+/// Deliberately NOT the production VlmWorker, this exists to produce the
 /// C1 go/no-go number on real hardware. Grammar is omitted (timing is what
 /// KT1 measures; schema accuracy was validated on macOS in KT3).
 final class MtmdBench {
@@ -39,7 +39,7 @@ final class MtmdBench {
         llama_backend_init()
 
         var mparams = llama_model_default_params()
-        mparams.n_gpu_layers = 0 // LLM stays on CPU — the Arm/KleidiAI story
+        mparams.n_gpu_layers = 0 // LLM stays on CPU, the Arm/KleidiAI story
         guard let model = llama_model_load_from_file(modelPath, mparams) else {
             throw BenchError.loadFailed("model: \(modelPath)")
         }
@@ -138,7 +138,7 @@ final class MtmdBench {
             }
         }
 
-        // Greedy decode, few tokens — the Facts answer is 1-8 tokens by design.
+        // Greedy decode, few tokens, the Facts answer is 1-8 tokens by design.
         let t2 = now()
         let sparams = llama_sampler_chain_default_params()
         guard let sampler = llama_sampler_chain_init(sparams) else {

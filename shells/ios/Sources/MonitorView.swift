@@ -1,6 +1,6 @@
 import SwiftUI
 
-// The performance monitor — deliberately SEPARATE from the guard app, which
+// The performance monitor, deliberately SEPARATE from the guard app, which
 // stays focused on watching + alerting. This is the instrument you open to read
 // what the engine is doing: live per-stage telemetry straight from the C++
 // Telemetry (the same numbers the offline replay harness reports).
@@ -29,7 +29,7 @@ struct MonitorView: View {
                     let s = driver.stats
                     let w = driver.windowed(minutes: 2)
 
-                    // Windowed — the accurate "right now", not a lifetime average.
+                    // Windowed, the accurate "right now", not a lifetime average.
                     MonoLabel(text: w.frames > 0 ? "LAST 2 MINUTES" : "LAST 2 MINUTES · warming up…", size: 9.5, opacity: 0.5)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         Metric(value: "\(w.frames)", label: "frames seen", hint: "in the window")
@@ -46,7 +46,7 @@ struct MonitorView: View {
                         Metric(value: "\(s.conflationDrops)", label: "conflation drops", hint: "bursts dropped-old")
                     }
 
-                    // Hardware / power — the efficiency + endurance story, live.
+                    // Hardware / power, the efficiency + endurance story, live.
                     VStack(alignment: .leading, spacing: 12) {
                         MonoLabel(text: "EFFICIENCY (NIGHTJAR'S LEVER)", size: 9.5, opacity: 0.5)
                         // The honest, Nightjar-specific number: how little the expensive
@@ -63,14 +63,14 @@ struct MonitorView: View {
                         Row(k: "Time-to-empty", v: driver.enduranceText, vColor: NW.muted(0.7))
                     }.padding(16).background(NW.card).cornerRadius(16)
 
-                    Text("Time-to-empty is the OS estimate for the WHOLE machine under everything it's running (on a dev Mac: Xcode, builds, the display, Nightjar). No app can measure just its own battery draw without root, so we don't pretend to. Nightjar's real endurance lever is above — the gate skipping most frames — and it's measured properly on a dedicated guard phone, where whole-device ≈ Nightjar.")
+                    Text("Time-to-empty is the OS estimate for the WHOLE machine under everything it's running (on a dev Mac: Xcode, builds, the display, Nightjar). No app can measure just its own battery draw without root, so we don't pretend to. Nightjar's real endurance lever is above, the gate skipping most frames, and it's measured properly on a dedicated guard phone, where whole-device ≈ Nightjar.")
                         .font(.system(size: 12)).lineSpacing(3).foregroundColor(NW.muted(0.5))
 
                     if driver.tier2.hasPrefix("Smol") {
-                        Text("Tier-2 is the real SmolVLM-500M (INT4) running on-device — it classifies person / vehicle / animal / package from the actual camera. Benchmark numbers of record come from the offline replay harness (make demo → report.md).")
+                        Text("Tier-2 is the real SmolVLM-500M (INT4) running on-device, it classifies person / vehicle / animal / package from the actual camera. Benchmark numbers of record come from the offline replay harness (make demo → report.md).")
                             .font(.system(size: 11)).lineSpacing(3).foregroundColor(NW.muted(0.4))
                     } else {
-                        Text("Note — Tier-2 here is the scripted stand-in (person/motion only); other subjects need the on-device VLM. On the Mac build the real SmolVLM loads automatically when the model is present.")
+                        Text("Note, Tier-2 here is the scripted stand-in (person/motion only); other subjects need the on-device VLM. On the Mac build the real SmolVLM loads automatically when the model is present.")
                             .font(.system(size: 11)).lineSpacing(3).foregroundColor(NW.muted(0.38))
                     }
                     Spacer()
@@ -81,7 +81,7 @@ struct MonitorView: View {
         .preferredColorScheme(.dark)
     }
 
-    private func fmt(_ v: Double, _ unit: String) -> String { v > 0 ? String(format: "%.2f %@", v, unit) : "—" }
+    private func fmt(_ v: Double, _ unit: String) -> String { v > 0 ? String(format: "%.2f %@", v, unit) : "-" }
 
     private func thermal() -> (String, Color) {
         switch ProcessInfo.processInfo.thermalState {
@@ -89,7 +89,7 @@ struct MonitorView: View {
         case .fair: return ("fair · a bit warm", Color(hex: 0xFACC15))
         case .serious: return ("serious · pacing itself", Color(hex: 0xFB923C))
         case .critical: return ("critical · motion-only", NW.rose)
-        @unknown default: return ("—", NW.cream)
+        @unknown default: return ("-", NW.cream)
         }
     }
 }

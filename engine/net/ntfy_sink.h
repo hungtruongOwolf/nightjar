@@ -16,7 +16,7 @@ struct NtfyConfig {
 };
 
 // Alert sink that pushes to an ntfy pub-sub topic (hosted or self-hosted).
-// Anyone who subscribes to the topic in the ntfy app gets the push — no
+// Anyone who subscribes to the topic in the ntfy app gets the push, no
 // account, works for many users. The alert crop is PNG-encoded and attached;
 // it is the only thing that leaves the device (ethics §8). The on-device iOS
 // shell implements IAlertSink with URLSession; this C++ sink drives the Mac

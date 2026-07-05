@@ -13,12 +13,12 @@ namespace nightjar {
 // grammar, returns the model's (constrained) JSON string.
 using TextInferFn = std::function<std::string(const std::string& prompt, const std::string& grammar)>;
 
-// Compiles one English rule into a Rule — ONCE, at rule creation (design doc
+// Compiles one English rule into a Rule, ONCE, at rule creation (design doc
 // §5.5). Output is GBNF-constrained flat JSON (subject/zone/start/end/
 // cooldown_s), parsed and validated into a Rule. The confirmation screen is
 // the first-class safety net: a small model may be wrong, so compile() failing
 // or producing an odd result is surfaced to the user, never silently trusted.
-// Actions (ntfy topic etc.) are attached separately by app config — the English
+// Actions (ntfy topic etc.) are attached separately by app config, the English
 // describes what to watch, not the delivery channel.
 class RuleCompiler {
 public:

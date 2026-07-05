@@ -2,7 +2,7 @@ import SwiftUI
 
 // Palette + type lifted from the Nightwatch prototype (sentry-source). Instrument
 // Serif / IBM Plex Mono aren't system fonts on iOS, so we use the closest system
-// designs (serif italic / monospaced) — same feel, no bundled font files.
+// designs (serif italic / monospaced), same feel, no bundled font files.
 extension Color {
     init(hex: UInt32) {
         self.init(.sRGB,

@@ -20,7 +20,7 @@ struct Alert {
     std::string one_liner;   // e.g. "person in backyard at 23:42"
     int64_t unix_s = 0;
     Letterboxed image;       // the alert crop (may be empty in tests)
-    bool degraded = false;   // true when running motion-only (VLM paused) — announced honestly
+    bool degraded = false;   // true when running motion-only (VLM paused), announced honestly
 };
 
 // Where alerts go. Concrete sinks (ntfy, Telegram, webhook) live in the

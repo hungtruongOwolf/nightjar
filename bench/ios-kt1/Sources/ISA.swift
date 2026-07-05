@@ -1,6 +1,6 @@
 import Foundation
 
-/// KT6 — dump the Arm ISA feature flags of the device this runs on.
+/// KT6, dump the Arm ISA feature flags of the device this runs on.
 /// Every published number must carry this line (measurement discipline).
 enum ISA {
     static func flag(_ name: String) -> String {

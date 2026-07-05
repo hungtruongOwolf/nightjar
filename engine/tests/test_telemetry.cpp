@@ -81,7 +81,7 @@ void test_counters_and_memory() {
     t.counter(Counter::FramesGated);         // +1
     t.counter(Counter::AlertsFired, 5);
     t.sample_memory(900 * 1024 * 1024);
-    t.sample_memory(700 * 1024 * 1024);      // lower — becomes the min
+    t.sample_memory(700 * 1024 * 1024);      // lower, becomes the min
     t.sample_memory(800 * 1024 * 1024);
 
     Report r = t.make_report();

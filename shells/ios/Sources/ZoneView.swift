@@ -13,7 +13,7 @@ struct Dither: View {
     }
 }
 
-// S3 — mark the watched zone. The drawn shape is rasterized to the gate's block
+// S3, mark the watched zone. The drawn shape is rasterized to the gate's block
 // grid (in the engine), so motion outside the line is discarded before the VLM
 // ever wakes. Three ways to mark: freehand, drag four corners, or full frame.
 struct ZoneView: View {
@@ -49,7 +49,7 @@ struct ZoneView: View {
 
             modePicker
             canvas
-            Text("Round, jagged, banana-shaped — motion outside your line is thrown away before the AI even wakes up.")
+            Text("Round, jagged, banana-shaped, motion outside your line is thrown away before the AI even wakes up.")
                 .font(.system(size: 11.5)).foregroundColor(NW.muted(0.38)).lineSpacing(2)
 
             HStack(spacing: 9) {
@@ -67,7 +67,7 @@ struct ZoneView: View {
 
     private var hint: String {
         switch mode {
-        case 1: return "Drag each corner — any four-sided shape."
+        case 1: return "Drag each corner, any four-sided shape."
         case 2: return "The whole camera view is armed."
         default: return "Trace around the area with one finger."
         }

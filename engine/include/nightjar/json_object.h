@@ -6,7 +6,7 @@
 
 namespace nightjar {
 
-// Parse a flat JSON object — {"key":"str", "key2":123, "key3":true} — into a
+// Parse a flat JSON object, {"key":"str", "key2":123, "key3":true}, into a
 // key→raw-string map (string values unquoted, numbers/bools kept verbatim).
 // Deliberately minimal: the RuleCompiler's LLM output is GBNF-constrained to a
 // flat object, so nested values are neither produced nor needed. Returns

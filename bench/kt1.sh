@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# KT1 — VLM latency kill-test (design doc §8).
+# KT1, VLM latency kill-test (design doc §8).
 # Benchmarks SmolVLM-500M-Instruct GGUF through llama-mtmd-cli, CPU-only,
 # over a directory of test images, and reports p50/p90/p99 wall-clock per
 # inference plus llama.cpp's own prompt-eval/eval timings.
@@ -30,7 +30,7 @@ PROMPT_JSON='Look at the image. Report which of these are visible: person, vehic
 PROMPT_COMPACT='Look at the image. Four questions, answer each with y or n, in this exact order, no spaces: person visible? vehicle visible? animal visible? package visible?'
 
 command -v llama-mtmd-cli >/dev/null || {
-  echo "llama-mtmd-cli not found — install with: brew install llama.cpp" >&2; exit 1; }
+  echo "llama-mtmd-cli not found, install with: brew install llama.cpp" >&2; exit 1; }
 
 fetch() { # fetch <filename>
   local f="$MODELS_DIR/$1"
@@ -82,7 +82,7 @@ for q in "${QUANTS[@]}"; do
     p50=$(percentile 50 < "$times.sorted"); p90=$(percentile 90 < "$times.sorted")
     p99=$(percentile 99 < "$times.sorted")
     echo "| $cfg | $p50 | $p90 | $p99 |" >> "$OUT_DIR/results.rows"
-    echo "  wall-clock ms: p50=$p50 p90=$p90 p99=$p99  (includes model load — see log timings for encode/prefill/decode split)"
+    echo "  wall-clock ms: p50=$p50 p90=$p90 p99=$p99  (includes model load, see log timings for encode/prefill/decode split)"
   done
 done
 

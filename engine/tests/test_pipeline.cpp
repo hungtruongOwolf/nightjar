@@ -119,7 +119,7 @@ void test_loitering_needs_dwell() {
     // real wall-clock, so with a fixed clock (dwell never elapses) it stays silent.
     TemporalRule loiter = person_appears();
     loiter.trigger = Trigger::Sustained;
-    loiter.dwell_s = 3600;  // 1h — will never elapse in the test
+    loiter.dwell_s = 3600;  // 1h, will never elapse in the test
     loiter.raw_text = "someone loitering";
     TemporalRuleEngine rules;
     rules.set_rules({loiter});

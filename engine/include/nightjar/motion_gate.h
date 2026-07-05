@@ -35,7 +35,7 @@ using BlockBitmap = std::vector<uint8_t>;
 
 // Tier-1 motion gate (design doc §5.2). Cheap per-frame filter that gates the
 // expensive VLM: tuned never-to-miss, letting Tier 2 clean up false positives.
-// Allocation-free after the first frame — all buffers are sized on first use
+// Allocation-free after the first frame, all buffers are sized on first use
 // and reused (hot path, CLAUDE.md §4).
 class MotionGate {
 public:

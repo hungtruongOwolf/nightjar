@@ -17,7 +17,7 @@ void test_expand_rect_margin_and_clamp() {
     CHECK_EQ(r.w, 140);
     CHECK_EQ(r.h, 70);
 
-    // Clamped at the image edge — never negative, never past bounds.
+    // Clamped at the image edge, never negative, never past bounds.
     Rect c = expand_rect(Rect{0, 0, 20, 20}, 0.5f, 25, 25);
     CHECK_EQ(c.x, 0);
     CHECK_EQ(c.y, 0);

@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Otto the owl — the exact SVG geometry from the Nightwatch prototype (viewBox
+// Otto the owl, the exact SVG geometry from the Nightwatch prototype (viewBox
 // 0 0 120 120), redrawn as a Canvas so it scales crisp. Eyes blink and the
 // pupils scan slowly; in alert mode the pupils widen and stop scanning.
 struct OttoOwl: View {

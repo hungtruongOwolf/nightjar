@@ -6,7 +6,7 @@ struct ContentView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Nightjar KT1 — on-device VLM latency")
+                Text("Nightjar KT1, on-device VLM latency")
                     .font(.headline)
 
                 GroupBox("ISA (KT6)") {

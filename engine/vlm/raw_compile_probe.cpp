@@ -1,4 +1,4 @@
-// raw_compile_probe — print the model's raw JSON for a set of rules, to inspect
+// raw_compile_probe, print the model's raw JSON for a set of rules, to inspect
 // the decomposed-fields compilation method (classify fields, assemble in code).
 //   raw_compile_probe <model.gguf> <prompt.txt> <grammar.gbnf>
 

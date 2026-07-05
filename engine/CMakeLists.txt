@@ -1,4 +1,4 @@
-# Nightjar engine — portable C++ core (no platform dependencies).
+# Nightjar engine, portable C++ core (no platform dependencies).
 # The iOS/macOS shells link against this; it never links back to them.
 cmake_minimum_required(VERSION 3.20)
 project(nightjar_engine CXX)
@@ -13,7 +13,7 @@ endif()
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 
-# Core library — grows one module per commit.
+# Core library, grows one module per commit.
 add_library(nightjar
   src/pgm.cpp
   src/file_replay_source.cpp
@@ -41,11 +41,11 @@ add_library(nightjar
 target_include_directories(nightjar PUBLIC include)
 
 # Tests: plain executables registered with CTest (zero external deps so the
-# repo builds offline — matters for a $0 project a stranger will clone).
+# repo builds offline, matters for a $0 project a stranger will clone).
 enable_testing()
 add_subdirectory(tests)
 
-# Micro-benchmarks (not tests) — build with -DNIGHTJAR_BENCH=ON.
+# Micro-benchmarks (not tests), build with -DNIGHTJAR_BENCH=ON.
 option(NIGHTJAR_BENCH "Build micro-benchmarks" ON)
 if(NIGHTJAR_BENCH)
   add_executable(gate_bench bench/gate_bench.cpp)
@@ -56,7 +56,7 @@ endif()
 add_executable(nightjar_demo tools/nightjar_demo.cpp)
 target_link_libraries(nightjar_demo PRIVATE nightjar)
 
-# Real llama.cpp-backed VLM worker — optional (keeps the core offline-buildable).
+# Real llama.cpp-backed VLM worker, optional (keeps the core offline-buildable).
 # Enable with -DNIGHTJAR_VLM=ON; expects llama.cpp headers/libs (brew).
 option(NIGHTJAR_VLM "Build the mtmd/llama.cpp VLM worker" OFF)
 if(NIGHTJAR_VLM)
@@ -106,7 +106,7 @@ if(NIGHTJAR_VLM)
   target_link_libraries(nightjar_flow PRIVATE nightjar_text nightjar_vlm)
 endif()
 
-# ntfy HTTP alert sink — optional (libcurl). Core stays dependency-free.
+# ntfy HTTP alert sink, optional (libcurl). Core stays dependency-free.
 option(NIGHTJAR_NET "Build the ntfy HTTP alert sink" OFF)
 if(NIGHTJAR_NET)
   find_package(CURL REQUIRED)

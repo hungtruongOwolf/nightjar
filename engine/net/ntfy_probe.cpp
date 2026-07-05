@@ -1,4 +1,4 @@
-// ntfy_probe — send one test alert (text + a generated image) to an ntfy topic
+// ntfy_probe, send one test alert (text + a generated image) to an ntfy topic
 // and print the HTTP status. Subscribe to the topic in the ntfy app to see it.
 //   ntfy_probe <topic> [server]   (server default https://ntfy.sh)
 

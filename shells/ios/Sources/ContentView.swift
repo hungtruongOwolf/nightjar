@@ -103,14 +103,14 @@ struct HelloView: View {
     let onStart: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 9) { BlinkDot(color: NW.rose); MonoLabel(text: "NIGHTJAR v0.1 — NIGHT GUARD", opacity: 0.5) }.padding(.top, 60)
+            HStack(spacing: 9) { BlinkDot(color: NW.rose); MonoLabel(text: "NIGHTJAR v0.1, NIGHT GUARD", opacity: 0.5) }.padding(.top, 60)
             HStack(alignment: .bottom, spacing: 14) {
                 Bob { OttoOwl(size: 100) }
-                Text("otto —\nyour night owl").font(NW.serif(15.5, italic: true)).foregroundColor(NW.muted(0.55)).padding(.bottom, 10)
+                Text("otto -\nyour night owl").font(NW.serif(15.5, italic: true)).foregroundColor(NW.muted(0.55)).padding(.bottom, 10)
             }.padding(.top, 22)
             (Text("Your old phone\njust got\n").foregroundColor(NW.cream) + Text("a night job.").foregroundColor(NW.rose).italic())
                 .font(NW.serif(50)).lineSpacing(2).padding(.top, 20)
-            Text("Tell it what to watch for — in your own words. It thinks right here on the phone. Not one frame leaves the house.")
+            Text("Tell it what to watch for, in your own words. It thinks right here on the phone. Not one frame leaves the house.")
                 .font(.system(size: 14.5)).lineSpacing(4).foregroundColor(NW.muted(0.55)).padding(.top, 16).frame(maxWidth: 300, alignment: .leading)
             HStack(spacing: 7) { FeatureChip(text: "ON-DEVICE"); FeatureChip(text: "MANY RULES"); FeatureChip(text: "WAKES YOU") }.padding(.top, 22)
             Spacer()
@@ -184,12 +184,12 @@ struct ConfirmView: View {
             HStack(alignment: .top, spacing: 9) {
                 OttoOwl(size: 30, showBelly: false)
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Here's my understanding —").font(.system(size: 14.5)).foregroundColor(NW.creamDim)
+                    Text("Here's my understanding -").font(.system(size: 14.5)).foregroundColor(NW.creamDim)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         chip("WHO", parsed.who); chip("WHERE", parsed.where)
                         chip("WHEN", parsed.when); chip("THEN", parsed.action)
                     }
-                    Text("Compiled once, on-device. Checked in microseconds — no AI at match time.")
+                    Text("Compiled once, on-device. Checked in microseconds, no AI at match time.")
                         .font(.system(size: 12)).foregroundColor(NW.muted(0.4))
                 }.padding(15).background(NW.bubble).clipShape(RoundedCorner(16, corners: [.topLeft, .topRight, .bottomRight]))
                 Spacer(minLength: 8)
@@ -214,7 +214,7 @@ struct ConfirmView: View {
                         .frame(width: 104).padding(.vertical, 15).overlay(RoundedRectangle(cornerRadius: 14).stroke(NW.muted(0.22)))
                 }
                 Button(action: onConfirm) {
-                    Text("Looks right — mark zone").font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                    Text("Looks right, mark zone").font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 15).background(NW.rose).cornerRadius(14)
                 }
             }
@@ -267,7 +267,7 @@ struct RulesView: View {
             }
             HStack(spacing: 10) {
                 Image(systemName: "bell.badge").font(.system(size: 13)).foregroundColor(NW.muted(0.5))
-                TextField("", text: $ntfyTopic, prompt: Text("ntfy topic — push alerts to your phone (optional)").foregroundColor(NW.muted(0.35)))
+                TextField("", text: $ntfyTopic, prompt: Text("ntfy topic, push alerts to your phone (optional)").foregroundColor(NW.muted(0.35)))
                     .font(.system(size: 13)).foregroundColor(NW.cream).textFieldStyle(.plain)
                     .autocorrectionDisabled(true)
             }.padding(13).background(NW.card).cornerRadius(14)

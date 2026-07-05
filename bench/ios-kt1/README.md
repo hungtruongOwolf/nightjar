@@ -1,4 +1,4 @@
-# NightjarKT1 — on-device VLM latency bench (KT1) + ISA dump (KT6)
+# NightjarKT1, on-device VLM latency bench (KT1) + ISA dump (KT6)
 
 Measures SmolVLM-500M INT4 inference latency (encode / prefill / decode split)
 on a real iPhone, warm, over 50 consecutive inferences. The number this app
@@ -26,4 +26,4 @@ prints decides the project's C1 go/no-go gate.
 - Warm-up inference excluded from stats; run ≥30 min of repeated benches
   before quoting sustained numbers.
 - Report p50/p90/p99 with the ISA block the app shows (KT6) + commit hash.
-- Free-provisioning signatures expire after 7 days — re-run from Xcode weekly.
+- Free-provisioning signatures expire after 7 days, re-run from Xcode weekly.

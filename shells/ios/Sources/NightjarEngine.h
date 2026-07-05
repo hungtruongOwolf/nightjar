@@ -4,9 +4,9 @@
 
 // Boundary between the SwiftUI/AppKit shell and the portable C++ engine. All
 // logic stays in C++ (design rule: 0% logic in Swift). Two ways to feed it:
-//   • camera mode  — the shell pushes real camera frames via submitPixelBuffer:;
+//   • camera mode , the shell pushes real camera frames via submitPixelBuffer:;
 //                    the engine runs the whole pipeline and reports stats/alerts.
-//   • synthetic    — the engine runs its own 30fps loop over a procedural scene
+//   • synthetic   , the engine runs its own 30fps loop over a procedural scene
 //                    (for the Simulator, which has no camera) and streams frames.
 NS_ASSUME_NONNULL_BEGIN
 
@@ -22,7 +22,7 @@ typedef struct {
     CGRect motionRect;  // normalized [0,1]
 } NJStats;
 
-// The parsed rule shown on the confirmation screen (design F1 safety net) — the
+// The parsed rule shown on the confirmation screen (design F1 safety net), the
 // full compiled rule, including the numeric time window so the engine can
 // enforce "after 10 pm" for real.
 @interface NJParsedRule : NSObject
@@ -41,7 +41,7 @@ typedef struct {
 // chose so the alert reflects the real rule (not a fabricated one).
 @interface NJRuleSpec : NSObject
 @property(nonatomic, copy) NSString *ruleId;      // stable id (maps alerts back to the rule)
-@property(nonatomic, copy) NSString *rawText;     // the user's English — becomes the alert phrase
+@property(nonatomic, copy) NSString *rawText;     // the user's English, becomes the alert phrase
 @property(nonatomic, copy) NSString *subjectKey;
 @property(nonatomic, copy) NSString *trigger;
 @property(nonatomic, copy) NSString *zoneLabel;   // e.g. "Backyard"
@@ -77,7 +77,7 @@ typedef struct {
 // releases. nil until the first frame.
 - (nullable CGImageRef)currentSnapshotCopy CF_RETURNS_RETAINED;
 
-// The last ~2s of processed frames (subsampled) — the short event clip.
+// The last ~2s of processed frames (subsampled), the short event clip.
 - (NSArray *)recentClipFrames;
 
 // Simulator fallback: engine generates + streams frames itself.

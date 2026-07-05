@@ -18,13 +18,13 @@ struct BestFrameConfig {
 };
 
 // The candidate frame handed to the VLM. The selector copies only the RAW crop
-// on the fast (capture) path — cheap; the expensive letterbox to `image` is done
+// on the fast (capture) path, cheap; the expensive letterbox to `image` is done
 // later on the VLM thread (Pipeline), keeping the tick handler at microseconds.
 struct CandidateFrame {
     std::vector<uint8_t> crop;  // raw grayscale crop (crop_w × crop_h), filled on the fast path
     int crop_w = 0;
     int crop_h = 0;
-    Letterboxed image;          // letterbox_size square — filled on the VLM thread, off the fast path
+    Letterboxed image;          // letterbox_size square, filled on the VLM thread, off the fast path
     Rect source_bbox;           // motion bbox in original frame coordinates
     uint64_t seq = 0;
     uint64_t ts_mono_ns = 0;    // capture time (t0) of the chosen frame
@@ -36,7 +36,7 @@ struct CandidateFrame {
 // Picks the frame to send to the VLM once the gate reports motion (design doc
 // §5.3). Opens a window on motion onset, tracks the largest-blob frame, and
 // publishes when either the frame is clearly good enough (early-exit on blob
-// size + sharpness — saves p50 latency) or the window closes (ceiling reached,
+// size + sharpness, saves p50 latency) or the window closes (ceiling reached,
 // or motion goes quiet). Copies the chosen frame's pixels immediately, since a
 // FrameView is only borrowed.
 class BestFrameSelector {

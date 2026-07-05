@@ -14,15 +14,15 @@ namespace nightjar {
 // Stamped as the frame flows through; not every frame reaches every stage
 // (most are discarded at the gate and never start the VLM).
 enum class Stage : int {
-    Capture = 0,       // t0  — frame arrives from capture
-    GateVerdict,       // t1  — motion gate decided
-    CandidatePublish,  // t2  — best-frame window closed, candidate published
-    VlmStart,          // t3  — VLM inference began
-    EncodeDone,        // t3a — vision encode finished
-    PrefillDone,       // t3b — prompt prefill finished
-    DecodeDone,        // t4  — token decode finished
-    RuleMatch,         // t5  — rule engine decided
-    PostDone,          // t6  — alert POST completed
+    Capture = 0,       // t0 , frame arrives from capture
+    GateVerdict,       // t1 , motion gate decided
+    CandidatePublish,  // t2 , best-frame window closed, candidate published
+    VlmStart,          // t3 , VLM inference began
+    EncodeDone,        // t3a, vision encode finished
+    PrefillDone,       // t3b, prompt prefill finished
+    DecodeDone,        // t4 , token decode finished
+    RuleMatch,         // t5 , rule engine decided
+    PostDone,          // t6 , alert POST completed
     Count
 };
 
@@ -85,7 +85,7 @@ public:
 
     Report make_report() const;
 
-    // Number of frames still in flight (stamped but not finalized) — lets the
+    // Number of frames still in flight (stamped but not finalized), lets the
     // harness assert it isn't leaking stamp state.
     size_t in_flight() const;
 

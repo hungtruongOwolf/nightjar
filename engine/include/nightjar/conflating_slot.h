@@ -12,7 +12,7 @@ namespace nightjar {
 // A single-slot, keep-latest hand-off between one producer and one consumer
 // (design doc §5.3). The gate produces candidate frames faster than the VLM
 // can consume them; rather than queue and fall behind, the slot keeps only the
-// newest value and counts how many were dropped — this is what makes the
+// newest value and counts how many were dropped, this is what makes the
 // end-to-end latency honest under load (a stale candidate is never processed).
 template <typename T>
 class ConflatingSlot {

@@ -96,7 +96,7 @@ void test_left_behind_no_fire_if_object_also_gone() {
     auto r = rule("left", "package", Trigger::LeftBehind);
     e.set_rules({r});
     e.observe(obs(0, {{"package", true}, {"person", true}}));
-    // Person picks the package back up and leaves — nothing left behind.
+    // Person picks the package back up and leaves, nothing left behind.
     CHECK(e.observe(obs(10, {{"package", false}, {"person", false}})).empty());
 }
 
@@ -123,7 +123,7 @@ void test_place_vs_take_distinguished() {
     place.observe(obs(0, {{"package", false}, {"person", true}}));  // person arrives
     place.observe(obs(1, {{"package", true}, {"person", true}}));   // sets object down
     auto d2 = place.observe(obs(2, {{"package", true}, {"person", false}}));  // leaves, object STAYS
-    CHECK(d2.empty());  // NOT theft — object still present
+    CHECK(d2.empty());  // NOT theft, object still present
 }
 
 void test_zone_and_cooldown() {
@@ -142,7 +142,7 @@ void test_time_window_gates() {
     r.time_window = TimeWindow{22 * 60, 6 * 60};  // overnight
     e.set_rules({r});
     Observation day = obs(0, {{"person", true}});
-    day.minute_of_day = 12 * 60;  // noon edge — outside window, no alert
+    day.minute_of_day = 12 * 60;  // noon edge, outside window, no alert
     CHECK(e.observe(day).empty());
     Observation gone = obs(1, {{"person", false}});
     gone.minute_of_day = 20 * 60;  // person leaves (arms the next edge)

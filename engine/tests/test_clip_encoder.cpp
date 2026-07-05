@@ -9,7 +9,7 @@ using namespace nightjar;
 namespace {
 
 // A realistic-ish 320x240 grayscale frame: smooth gradient background + a
-// textured foreground block (like a person crop) — not a trivial flat image.
+// textured foreground block (like a person crop), not a trivial flat image.
 GrayImage sample_frame() {
     GrayImage g;
     g.width = 320;

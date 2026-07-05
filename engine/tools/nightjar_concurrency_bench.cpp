@@ -1,8 +1,8 @@
-// nightjar_concurrency_bench — the low-latency pipeline story, measured.
+// nightjar_concurrency_bench, the low-latency pipeline story, measured.
 //
 // Drives the pipeline under a burst of motion frames while the VLM stage is
 // deliberately slow, and measures whether the cheap gate stage (the "tick
-// handler") stays responsive — i.e. on_frame() never blocks on the VLM. This is
+// handler") stays responsive, i.e. on_frame() never blocks on the VLM. This is
 // the trading-desk property: the fast path is never stalled by the slow path;
 // stale work conflates; latency is measured coordinated-omission-free.
 //
@@ -93,10 +93,10 @@ int main(int argc, char** argv) {
         f.ts_mono_ns = now_ns();
 
         const uint64_t a = now_ns();
-        pipe.on_frame(f);  // the fast path — must not block on the VLM
+        pipe.on_frame(f);  // the fast path, must not block on the VLM
         gate_us.push_back((now_ns() - a) / 1e3);
 
-        // Pace to the capture schedule (don't wait for the system — honest).
+        // Pace to the capture schedule (don't wait for the system, honest).
         const uint64_t scheduled = t0 + uint64_t(i + 1) * period_ns;
         const uint64_t now = now_ns();
         if (now < scheduled) std::this_thread::sleep_for(std::chrono::nanoseconds(scheduled - now));

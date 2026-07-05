@@ -9,12 +9,12 @@ JSON object. Output ONLY the JSON, fields in this exact order:
 - "zone": the place, one lowercase word (backyard, driveway, garage, shed,
   frontdoor, yard, shop, garden, porch, gate). If none, use "any".
 - "trigger": one of:
-    "appears"     — the subject shows up / enters / is seen (the default).
-    "loiter"      — the subject stays / lingers / waits / hangs around / loiters
+    "appears"    , the subject shows up / enters / is seen (the default).
+    "loiter"     , the subject stays / lingers / waits / hangs around / loiters
                     for a while. Use dwell_s for the duration.
-    "left_behind" — an object is dropped/left and the person then leaves
+    "left_behind", an object is dropped/left and the person then leaves
                     (abandoned package). subject is the object (usually package).
-    "removed"     — an object that was there is taken away / stolen / goes
+    "removed"    , an object that was there is taken away / stolen / goes
                     missing (theft). subject is the object taken.
 - "dwell_s": seconds for "loiter" (e.g. "for a minute" = 60, "a few minutes" =
   180). For other triggers use 0.

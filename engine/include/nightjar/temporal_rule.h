@@ -9,14 +9,14 @@
 namespace nightjar {
 
 // What kind of temporal condition fires the rule. These are the conditions a
-// closed-vocabulary detector fundamentally cannot express — the differentiator.
+// closed-vocabulary detector fundamentally cannot express, the differentiator.
 enum class Trigger {
-    Appears,     // predicate becomes true (rising edge) — the classic case
+    Appears,     // predicate becomes true (rising edge), the classic case
     Sustained,   // predicate stays true continuously for >= dwell_s (loitering)
     LeftBehind,  // object appears and STAYS present while the actor leaves
-                 // (package dropped, then the person walks off) — "delivery"
+                 // (package dropped, then the person walks off), "delivery"
     Removed,     // object that WAS present goes absent while a person is around
-                 // (something is taken away) — "theft". The mirror of LeftBehind:
+                 // (something is taken away), "theft". The mirror of LeftBehind:
                  // place vs take are distinguished by the object's presence
                  // trajectory (appears+stays vs was-there+disappears), not one frame.
 };

@@ -1,7 +1,7 @@
 #include "nightjar/clip_encoder.h"
 
 // The single translation unit that defines the stb implementation (kept here in
-// the core so the alert sink and clip store share one copy — no duplicate
+// the core so the alert sink and clip store share one copy, no duplicate
 // symbols). Silence the vendored header's own warnings.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"

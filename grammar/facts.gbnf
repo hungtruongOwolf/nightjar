@@ -1,7 +1,7 @@
-# Constrains the VLM to emit exactly the Facts JSON schema — parse can never fail.
+# Constrains the VLM to emit exactly the Facts JSON schema, parse can never fail.
 # Baseline grammar (~25-35 decode tokens). See facts_compact.gbnf for the
 # token-diet variant benchmarked against this one in KT1/KT3.
-# NOTE: llama.cpp GBNF has no line continuation inside a rule — root stays on one line.
+# NOTE: llama.cpp GBNF has no line continuation inside a rule, root stays on one line.
 root ::= "{" ws "\"person\":" ws bool "," ws "\"vehicle\":" ws bool "," ws "\"animal\":" ws bool "," ws "\"package\":" ws bool ws "}"
 bool ::= "true" | "false"
 ws   ::= [ \t]*

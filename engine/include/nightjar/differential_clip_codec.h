@@ -11,7 +11,7 @@ struct DiffConfig {
     int block = 16;  // block grid; only blocks that changed vs the previous frame are stored
 };
 
-// Inter-frame differential codec for evidence clips — the "surveillance scenes
+// Inter-frame differential codec for evidence clips, the "surveillance scenes
 // are ~95% static, so store only what moved" idea, reusing Nightjar's own
 // block-change concept (the motion gate already thinks in 16×16 blocks). Frame 0
 // is a keyframe; each later frame stores ONLY the blocks that differ from the

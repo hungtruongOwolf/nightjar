@@ -1,4 +1,4 @@
-// compile_eval — reproducible accuracy eval for the decomposed rule compiler.
+// compile_eval, reproducible accuracy eval for the decomposed rule compiler.
 // Runs DecomposedRuleCompiler (real model) over a labeled set and reports
 // subject + trigger accuracy. Run from the repo root (reads prompts/ + grammar/).
 //   compile_eval <model.gguf> <eval.txt>

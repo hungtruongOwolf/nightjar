@@ -19,7 +19,7 @@ Facts ScriptedVlmWorker::infer(const CandidateFrame& candidate) {
     Facts f = fn_(candidate);
     if (sim_infer_ms_ > 0) {
         // Plausible simulated split (encode/prefill/decode ~ 15/50/35%). Clearly
-        // synthetic — real numbers come from the mtmd-backed worker.
+        // synthetic, real numbers come from the mtmd-backed worker.
         const float total = static_cast<float>(sim_infer_ms_);
         f.encode_ms = total * 0.15f;
         f.prefill_ms = total * 0.50f;

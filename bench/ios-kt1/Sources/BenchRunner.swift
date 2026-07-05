@@ -43,14 +43,14 @@ final class BenchRunner: ObservableObject {
 
         do {
             let t0 = Date()
-            // Encoder on Metal — the default configuration from the Mac KT1
+            // Encoder on Metal, the default configuration from the Mac KT1
             // finding (CPU encoder measured ~34x slower there).
             let bench = try MtmdBench(modelPath: modelPath, mmprojPath: mmprojPath,
                                       encoderUseGPU: true)
             await append(String(format: "model loaded in %.1fs · mem: %d MB available",
                                 Date().timeIntervalSince(t0), ISA.availableMemoryMB))
 
-            // Warm-up (excluded from stats — cold numbers are reported separately).
+            // Warm-up (excluded from stats, cold numbers are reported separately).
             let warm = try bench.infer(imagePath: images[0], question: Self.question)
             await append(String(format: "warm-up (cold, excluded): %.0fms enc=%.0f pre=%.0f dec=%.0f → \"%@\"",
                                 warm.totalMs, warm.encodeMs, warm.prefillMs, warm.decodeMs, warm.output))

@@ -34,7 +34,7 @@ struct PipelineConfig {
 // gate + best-frame inline; the VLM runs on its own thread, fed via a
 // ConflatingSlot so candidate bursts drop-old rather than queue. Each candidate
 // becomes a set of per-frame predicate answers (IPredicateVlm), packaged as an
-// Observation and fed to the TemporalRuleEngine — so the pipeline fires on
+// Observation and fed to the TemporalRuleEngine, so the pipeline fires on
 // conditions a detector can't express (loitering, left-behind), not just
 // object presence. Telemetry stamps every stage. Deps are interfaces, so the
 // same pipeline runs the reproducible demo and the on-device app.

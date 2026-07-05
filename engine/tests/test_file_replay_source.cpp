@@ -70,7 +70,7 @@ void test_drops_frames_when_consumer_is_slow() {
     std::string dir = make_frames("slow", 20);
     FileReplaySource src({dir, /*fps=*/1000.0, /*loop=*/false});  // 1ms period
 
-    // Each callback takes 20ms — far longer than the 1ms slot, so most slots
+    // Each callback takes 20ms, far longer than the 1ms slot, so most slots
     // pass and their frames must be dropped, not queued (anti-coordinated-omission).
     src.start([](const FrameView&) { std::this_thread::sleep_for(std::chrono::milliseconds(20)); });
     src.wait();

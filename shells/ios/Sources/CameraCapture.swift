@@ -6,7 +6,7 @@ import UIKit
 import AppKit
 #endif
 
-// Owns the real camera. Delivers luma frames straight to the C++ engine — the
+// Owns the real camera. Delivers luma frames straight to the C++ engine, the
 // only place platform capture touches the engine. Cross-platform: same code
 // runs on iOS (device) and macOS (webcam).
 final class CameraCapture: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate {

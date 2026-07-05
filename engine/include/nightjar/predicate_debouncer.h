@@ -11,12 +11,12 @@ struct DebounceConfig {
                          // (1 = detect immediately, never-miss; Tier 2 cleans up)
     int off_streak = 2;  // consecutive raw-false frames before it goes "off"
                          // (asymmetric: slower to clear, so one bad frame doesn't
-                         //  drop an object — matters for the place-vs-take signal)
+                         //  drop an object, matters for the place-vs-take signal)
 };
 
 // The per-frame VLM is a noisy sensor: one flaky frame can flip a fact. The
 // debouncer applies hysteresis so a predicate only changes state after enough
-// consecutive agreeing frames — a single blip is ignored. This is what makes
+// consecutive agreeing frames, a single blip is ignored. This is what makes
 // the temporal state machine (and its place-vs-take distinction) trustworthy
 // enough for a live demo. Deterministic; per-predicate state kept internally.
 class PredicateDebouncer {
