@@ -1,47 +1,66 @@
-# Nightjar, demo video script (aim ~2:00, demo ~1:00)
+# Nightjar, demo video script (about 2:00)
 
-Record on the Mac (NightjarMac, real webcam). Lead with the hook. Don't explain
-the plumbing; show that it works, then show why it's fast on Arm. Keep the energy
-up. Optional: an ntfy topic set + your phone on screen for the push moment.
+One continuous story, not a slideshow. Read the voiceover straight through and let
+the screen follow. Record the guard on the Mac webcam (NightjarMac). Confident,
+unhurried, a little personal. No music with lyrics.
 
-Setup: `cd shells/ios && xcodegen && xcodebuild -scheme NightjarMac -configuration Release build`, open the app, grant camera. Good light, you'll walk in as the "intruder".
-
----
-
-### Hook (0:00 to 0:12)
-Face the camera or show the drawer of old phones.
-> "There are 300 billion Arm chips on the planet, and the smartest one you own is
-> asleep in a drawer. I woke mine up. One sentence, and a spare phone is a
-> security camera that runs all its AI on the Arm CPU. No cloud. No NVIDIA."
-
-### Why it matters (0:12 to 0:25)
-> "Normally, making a camera notice what you care about needs an ML team and a
-> cloud GPU streaming your living room to someone's server. Nightjar does it in
-> plain English, on hardware you already own, and nothing leaves the device."
-
-### Demo, about one minute (0:25 to 1:20)
-Keep it moving. On the Mac:
-- Type *"tell me if someone loiters near my car after 10pm"*, send. "I just say what to watch for."
-- The WHO / WHERE / WHEN chips appear. "Compiled once, on the device."
-- Start guarding, walk into frame. The box tracks you, the alert fires. "It caught me, with the exact rule I typed."
-- (If ntfy is set) hold up the phone as it buzzes with the crop. "And it pushed one photo to my phone, the only thing that ever leaves."
-
-### The Arm optimization, the part that wins (1:20 to 1:50)
-Open the Monitor while you talk.
-> "Here is why it fits on a phone. Two tiers. A hand-written Arm NEON gate costs
-> 58 microseconds a frame and throws away 88 percent of them. Only the few
-> percent that pass wake the INT4 SmolVLM, which runs on the Arm CPU through
-> llama.cpp and KleidiAI. Every number here is measured and reproducible, the
-> gate provably compiles to real NEON instructions, and the same C++ engine runs
-> on macOS, Linux aarch64, and iPhone. No discrete GPU anywhere."
-
-### Close (1:50 to 2:00)
-> "No cloud, no account, no NVIDIA. Clone the repo, run make demo, and you see the
-> whole pipeline in five minutes. That old phone finally has a night job."
+Before you record: build and open the Mac app (`cd shells/ios && xcodegen && xcodebuild -scheme NightjarMac -configuration Release build`), grant the camera, optionally set an ntfy topic and have your phone in frame. Good light. You are the person who walks in.
 
 ---
 
-Notes for the edit:
-- If you go over, cut the "why it matters" lines, not the Arm-optimization part.
-- On-screen text to flash during the Arm section: "88% of frames gated", "NEON 58 us/frame", "INT4 SmolVLM on Arm CPU (KleidiAI)", "3 Arm platforms, one codebase".
-- The point to land: not "look how much it does", but "look how little the expensive model has to run, because the cheap Arm-CPU gate does the heavy lifting".
+## The voiceover (read it as one take)
+
+> This is a phone I stopped using three years ago. Today it is worth almost nothing.
+> In the next minute it becomes a security guard I program just by talking to it,
+> that runs entirely on its own chip, and never sends a single frame to the cloud.
+>
+> Everyone right now is fighting over GPUs. But the most capable AI hardware most
+> people own is already sitting dead in a drawer. I wanted to prove that old Arm
+> phone still has a lot left to give.
+>
+> So I just tell it, in plain English, what to watch for.
+> *(type: "tell me if someone loiters near my car after 10pm")*
+> It understands the sentence, and shows me what it heard before it arms anything.
+> Then it watches. When I walk in,
+> *(walk into frame; the box tracks you; the alert fires)*
+> it catches me, and buzzes my real phone with the photo. No training, no setup,
+> no cloud.
+>
+> Here is the trick that makes this run on a phone instead of a server. I spent
+> years in high-frequency trading, where the whole game is doing the most work in
+> the least time and never missing the one event that matters. Same idea here.
+> A tiny hand-written Arm NEON filter checks every frame in 58 microseconds and
+> throws away 88 percent of them. The expensive vision model only ever wakes for
+> the few that count. The frame is the tick, the alert is the order, and I tune
+> the worst case, not the average. All of it on the Arm CPU. No NVIDIA, no cloud,
+> and every number here is reproducible.
+>
+> And it is the same engine whether the sentence is "someone near my car" or
+> "tell me if grandma has not moved in two hours." This is the spreadsheet moment
+> for computer vision: anyone can program what a camera notices, on hardware they
+> already own, private by default. A billion dead phones, each one a private AI
+> sensor waiting for a job.
+>
+> Clone the repo, run make demo, and you see the whole thing in five minutes.
+> Nightjar. Give your old phone a night job.
+
+---
+
+## What to show, and rough timing
+
+| Time | Voiceover beat | On screen |
+|---|---|---|
+| 0:00 to 0:12 | the hook (a dead phone becomes a guard) | hold up an old phone, or the app's hello screen with Otto |
+| 0:12 to 0:22 | GPUs are scarce, the hardware is in a drawer | you talking, or a drawer of old phones |
+| 0:22 to 0:52 | tell it a rule, it confirms, it catches me | the demo: type the rule, the WHO/WHERE/WHEN chips, start guard, walk in, alert fires, phone buzzes |
+| 0:52 to 1:30 | the trick, the HFT idea, the Arm-CPU numbers | open the Monitor while you talk |
+| 1:30 to 1:50 | same engine, any sentence, the vision | the rules list / a couple of example sentences on screen |
+| 1:50 to 2:00 | make demo, the closing line | a terminal running `make demo`, then the app |
+
+## Text to flash on screen during the Arm section (0:52 to 1:30)
+
+`88% of frames gated` · `NEON gate, 58 us/frame` · `INT4 SmolVLM on the Arm CPU (KleidiAI)` · `no NVIDIA, no cloud` · `3 Arm platforms, one codebase`
+
+## The one thing to land
+
+Not "look how much it does." The point is **how little the expensive model has to run, because a tiny Arm-CPU filter does the heavy lifting.** If you only have time for one idea, make it that one.
