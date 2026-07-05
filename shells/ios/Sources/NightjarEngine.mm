@@ -1,5 +1,12 @@
 #import "NightjarEngine.h"
 
+#import <TargetConditionals.h>
+#if TARGET_OS_OSX
+#import <AppKit/AppKit.h>  // NSValue.pointValue
+#else
+#import <UIKit/UIKit.h>     // NSValue.CGPointValue
+#endif
+
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -65,6 +72,29 @@ PipelineConfig make_cfg() {
     return cfg;
 }
 
+using ZonePoly = std::vector<std::pair<float, float>>;
+
+bool point_in_poly(float x, float y, const ZonePoly& p) {
+    bool in = false;
+    for (size_t i = 0, j = p.size() - 1; i < p.size(); j = i++) {
+        float xi = p[i].first, yi = p[i].second, xj = p[j].first, yj = p[j].second;
+        if (((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) in = !in;
+    }
+    return in;
+}
+
+// Rasterize a normalized polygon to the gate's block grid (block=16).
+BlockBitmap rasterize_zone(const ZonePoly& poly, int w, int h) {
+    const int block = 16, gw = w / block, gh = h / block;
+    BlockBitmap m((size_t)gw * gh, 0);
+    for (int gy = 0; gy < gh; ++gy)
+        for (int gx = 0; gx < gw; ++gx) {
+            float cx = (gx + 0.5f) * block / w, cy = (gy + 0.5f) * block / h;
+            m[(size_t)gy * gw + gx] = point_in_poly(cx, cy, poly) ? 1 : 0;
+        }
+    return m;
+}
+
 // Owns the whole engine, wired once. Destruction order matters: pipe (declared
 // last) is torn down first, before the objects it points at.
 struct LiveEngine {
@@ -73,12 +103,15 @@ struct LiveEngine {
     BlockSink sink;
     Telemetry tel;
     MotionGate overlay_gate;
+    ZonePoly zone;
+    int zgw = -1, zgh = -1;
     Pipeline pipe;
 
-    LiveEngine(const std::string& trig, void (^onAlert)(NSString*))
+    LiveEngine(const std::string& trig, void (^onAlert)(NSString*), ZonePoly z)
         : vlm({{"person", true}}, 120),
           sink(onAlert),
           overlay_gate(GateConfig{}),
+          zone(std::move(z)),
           pipe(make_cfg(), &rules, &vlm, &sink, &tel) {
         rules.set_rules({rule_for(trig)});
         pipe.set_clock([] { return Clock{12 * 60, (int64_t)std::time(nullptr)}; });
@@ -87,6 +120,15 @@ struct LiveEngine {
     ~LiveEngine() { pipe.stop(); }
 
     NJStats process(const FrameView& fv) {
+        if (zone.size() >= 3) {
+            int gw = fv.width / 16, gh = fv.height / 16;
+            if (gw != zgw || gh != zgh) {  // rasterize once per frame geometry
+                zgw = gw; zgh = gh;
+                BlockBitmap m = rasterize_zone(zone, fv.width, fv.height);
+                overlay_gate.set_zone_mask(m);
+                pipe.set_zone_mask(m);
+            }
+        }
         GateResult g = overlay_gate.evaluate(fv);
         pipe.on_frame(fv);
         Report rep = tel.make_report();
@@ -168,13 +210,26 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     std::thread _loop;
     uint64_t _seq;
     void (^_onStats)(NJStats);
+    ZonePoly _zone;
+}
+
+- (void)setZonePolygon:(NSArray<NSValue*>*)points {
+    _zone.clear();
+    for (NSValue* v in points) {
+#if TARGET_OS_OSX
+        NSPoint p = v.pointValue;
+#else
+        CGPoint p = v.CGPointValue;
+#endif
+        _zone.emplace_back((float)p.x, (float)p.y);
+    }
 }
 
 - (void)startCameraWithTrigger:(NSString*)trigger
                        onStats:(void (^)(NJStats))onStats
                        onAlert:(void (^)(NSString*))onAlert {
     [self stop];
-    _engine = std::make_unique<LiveEngine>(trigger ? trigger.UTF8String : "appears", onAlert);
+    _engine = std::make_unique<LiveEngine>(trigger ? trigger.UTF8String : "appears", onAlert, _zone);
     _onStats = [onStats copy];
     _seq = 0;
 }
@@ -199,7 +254,7 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
                           onFrame:(void (^)(CGImageRef, NJStats))onFrame
                           onAlert:(void (^)(NSString*))onAlert {
     [self stop];
-    _engine = std::make_unique<LiveEngine>(trigger ? trigger.UTF8String : "appears", onAlert);
+    _engine = std::make_unique<LiveEngine>(trigger ? trigger.UTF8String : "appears", onAlert, _zone);
     _running = true;
     std::atomic<bool>* running = &_running;
     LiveEngine* eng = _engine.get();

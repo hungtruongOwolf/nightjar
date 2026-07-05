@@ -14,7 +14,10 @@ final class EngineDriver: ObservableObject {
     private lazy var camera = CameraCapture(engine: engine)
     var session: AVCaptureSession { camera.session }
 
-    func start(trigger: String) {
+    func start(trigger: String, zone: [CGPoint]) {
+        if !zone.isEmpty {
+            engine.setZonePolygon(zone.map(njPoint))
+        }
         if CameraCapture.hasCamera {
             usingCamera = true
             engine.startCamera(withTrigger: trigger,
@@ -31,9 +34,19 @@ final class EngineDriver: ObservableObject {
     func stop() { camera.stop(); engine.stop() }
 }
 
+// NSValue(CGPoint) differs between iOS and macOS.
+func njPoint(_ p: CGPoint) -> NSValue {
+    #if os(macOS)
+    return NSValue(point: NSPoint(x: p.x, y: p.y))
+    #else
+    return NSValue(cgPoint: p)
+    #endif
+}
+
 struct GuardView: View {
     let trigger: String
     let armedCount: Int
+    var zone: [CGPoint] = []
     let onExit: () -> Void
 
     @StateObject private var driver = EngineDriver()
@@ -50,7 +63,7 @@ struct GuardView: View {
             }
             if showAlert { alertOverlay }
         }
-        .onAppear { driver.start(trigger: trigger); since = Date() }
+        .onAppear { driver.start(trigger: trigger, zone: zone); since = Date() }
         .onDisappear { driver.stop() }
         .onChange(of: driver.alertText) { new in
             guard new != nil else { return }
@@ -74,7 +87,7 @@ struct GuardView: View {
                         .frame(width: geo.size.width, height: geo.size.height).clipped()
                 } else { NW.guardBg }
                 ScanLine()
-                ZoneAndMotion(motion: driver.stats.motion.boolValue ? driver.stats.motionRect : .zero)
+                ZoneAndMotion(motion: driver.stats.motion.boolValue ? driver.stats.motionRect : .zero, zone: zone)
                 RadialGradient(colors: [.clear, .black.opacity(0.45)], center: .center, startRadius: 60, endRadius: 380)
                     .allowsHitTesting(false)
                 VStack {
@@ -165,15 +178,23 @@ struct ScanLine: View {
 }
 struct ZoneAndMotion: View {
     let motion: CGRect
+    var zone: [CGPoint] = []
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width, h = geo.size.height
             TimelineView(.animation) { tl in
                 let phase = -tl.date.timeIntervalSinceReferenceDate * 18
                 Canvas { ctx, _ in
-                    let zone = Path(roundedRect: CGRect(x: w * 0.1, y: h * 0.08, width: w * 0.8, height: h * 0.86), cornerRadius: 18)
-                    ctx.fill(zone, with: .color(NW.rose.opacity(0.10)))
-                    ctx.stroke(zone, with: .color(NW.rose), style: StrokeStyle(lineWidth: 1.3, dash: [5, 4], dashPhase: phase))
+                    let zonePath: Path = {
+                        guard zone.count >= 3 else {
+                            return Path(roundedRect: CGRect(x: w * 0.1, y: h * 0.08, width: w * 0.8, height: h * 0.86), cornerRadius: 18)
+                        }
+                        var p = Path(); p.move(to: CGPoint(x: zone[0].x * w, y: zone[0].y * h))
+                        for q in zone.dropFirst() { p.addLine(to: CGPoint(x: q.x * w, y: q.y * h)) }
+                        p.closeSubpath(); return p
+                    }()
+                    ctx.fill(zonePath, with: .color(NW.rose.opacity(0.10)))
+                    ctx.stroke(zonePath, with: .color(NW.rose), style: StrokeStyle(lineWidth: 1.3, lineJoin: .round, dash: [5, 4], dashPhase: phase))
                     if motion != .zero {
                         let r = CGRect(x: motion.minX * w, y: motion.minY * h, width: motion.width * w, height: motion.height * h)
                         ctx.stroke(Path(roundedRect: r, cornerRadius: 4), with: .color(NW.rose), lineWidth: 2)

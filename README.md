@@ -157,16 +157,19 @@ A bounded, rotating on-device store (hard cap, oldest evicted). A clip is a *spa
 
 Two thin shells over **one** portable C++ engine — **0% business logic in Swift**, reached through an Obj-C++ bridge. You type a rule in plain English; it's compiled once, on-device, into a structured rule (the confirmation screen is the safety net); then the guard runs **live** — frames stream through the whole pipeline in real time (the same path AVFoundation feeds), so you watch the motion gate track a figure and the alert fire the moment the temporal rule trips.
 
+Flow: **hello → type a rule → confirm → mark the zone → watch list → live guard.**
+
 <p align="center">
-  <img src="shells/ios/screenshots/01-hello.png" width="19%" alt="hello"/>
   <img src="shells/ios/screenshots/02-chat.png" width="19%" alt="type a rule in English"/>
   <img src="shells/ios/screenshots/03-confirm.png" width="19%" alt="compiled rule — WHO/WHERE/WHEN/THEN"/>
-  <img src="shells/ios/screenshots/05-live-tracking.png" width="19%" alt="live gate tracking a figure"/>
-  <img src="shells/ios/screenshots/06-live-alert.png" width="19%" alt="live loitering alert"/>
+  <img src="shells/ios/screenshots/04-zone.png" width="19%" alt="mark the zone freehand"/>
+  <img src="shells/ios/screenshots/06-live-tracking.png" width="19%" alt="live gate tracking a figure"/>
+  <img src="shells/ios/screenshots/07-live-alert.png" width="19%" alt="live loitering alert"/>
 </p>
 
 - **Real camera.** A macOS target (`NightjarMac`) runs the live guard on the **Mac webcam** — test it with no cable. iOS takes the device camera; the Simulator (no camera) falls back to a synthetic scene, labelled `SIM`.
 - **Rule input → compile.** English → `WHO / WHERE / WHEN / THEN`, on-device. *(App build uses a deterministic closed-vocab parser; the LLM-backed `DecomposedRuleCompiler` in the engine is the production path.)*
+- **Draw the zone.** Freehand / drag-corners / full-frame. The shape is rasterized to the gate's block grid, so motion **outside the line is discarded before the VLM ever wakes** (`Pipeline::set_zone_mask`).
 - **Numbers live in a separate Monitor**, not the guard — the app stays focused on watching + alerting. The benchmark source of truth is the offline replay harness (`make demo` → `report.md`).
 
 > Run on the Mac: `cd shells/ios && xcodegen && xcodebuild -scheme NightjarMac -configuration Release build`, then open the built `NightjarMac.app` and allow the camera.

@@ -95,6 +95,8 @@ void Pipeline::stop() {
     tel_->counter(Counter::ConflationDrops, static_cast<int64_t>(slot_.drops()));
 }
 
+void Pipeline::set_zone_mask(BlockBitmap mask) { gate_.set_zone_mask(std::move(mask)); }
+
 void Pipeline::on_frame(const FrameView& frame) {
     const uint64_t seq = frame.seq;
     tel_->stamp(Stage::Capture, seq, frame.ts_mono_ns);

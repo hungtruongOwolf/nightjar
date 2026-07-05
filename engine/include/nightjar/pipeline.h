@@ -53,6 +53,11 @@ public:
 
     void on_frame(const FrameView& frame);
 
+    // Restrict Tier-1 motion to a zone (design doc §5.2): a w/block × h/block
+    // bitmap, 1 = block is watched. Motion outside is discarded before the VLM
+    // ever wakes. Empty mask = whole frame.
+    void set_zone_mask(BlockBitmap mask);
+
 private:
     void vlm_loop();
     void process_candidate(const CandidateFrame& candidate);

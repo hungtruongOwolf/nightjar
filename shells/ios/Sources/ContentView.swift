@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum Screen { case hello, chat, confirm, rules, guarding }
+enum Screen { case hello, chat, confirm, zone, rules, guarding }
 
 struct RuleItem: Identifiable {
     let id = UUID()
@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var screen: Screen
     @State private var ruleText: String
     @State private var parsed: NJParsedRule?
+    @State private var zonePolygon: [CGPoint] = []
     @State private var rules: [RuleItem] = [
         .init(title: "Person appears in the backyard", sub: "10 PM – 6 AM · Notify + photo", icon: "figure.walk", trigger: "appears", on: true),
     ]
@@ -25,6 +26,7 @@ struct ContentView: View {
         switch env["NJ_SCREEN"] {
         case "chat": _screen = State(initialValue: .chat)
         case "confirm": _screen = State(initialValue: .confirm)
+        case "zone": _screen = State(initialValue: .zone)
         case "rules": _screen = State(initialValue: .rules)
         case "guard": _screen = State(initialValue: .guarding)
         default: _screen = State(initialValue: .hello)
@@ -49,13 +51,17 @@ struct ContentView: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .confirm:
                 ConfirmView(ruleText: ruleText, parsed: parsed ?? NightjarEngine.compileRule(ruleText),
-                            onRewrite: { go(.chat) }, onConfirm: { addRuleAndGuard() })
+                            onRewrite: { go(.chat) }, onConfirm: { go(.zone) })
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            case .zone:
+                ZoneView(zoneName: (parsed ?? NightjarEngine.compileRule(ruleText)).where,
+                         onSave: { poly in zonePolygon = poly; addRuleAndGuard() })
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .rules:
                 RulesView(rules: $rules, onStart: { go(.guarding) }, onAdd: { ruleText = ""; go(.chat) })
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .guarding:
-                GuardView(trigger: activeTrigger, armedCount: rules.filter { $0.on }.count, onExit: { go(.rules) })
+                GuardView(trigger: activeTrigger, armedCount: rules.filter { $0.on }.count, zone: zonePolygon, onExit: { go(.rules) })
                     .transition(.opacity)
             }
         }
@@ -176,7 +182,7 @@ struct ConfirmView: View {
                         .frame(width: 104).padding(.vertical, 15).overlay(RoundedRectangle(cornerRadius: 14).stroke(NW.muted(0.22)))
                 }
                 Button(action: onConfirm) {
-                    Text("Looks right — start").font(.system(size: 14.5, weight: .semibold)).foregroundColor(.white)
+                    Text("Looks right — mark zone").font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 15).background(NW.rose).cornerRadius(14)
                 }
             }

@@ -41,6 +41,11 @@ typedef struct {
 // confirmation screen is the safety net either way.
 + (NJParsedRule *)compileRule:(NSString *)english;
 
+// Set the watched zone as a normalized polygon (CGPoint values in [0,1]),
+// before starting. Empty = whole frame. The engine rasterizes it to the gate's
+// block grid so motion outside the zone never wakes the VLM.
+- (void)setZonePolygon:(NSArray<NSValue *> *)normalizedPoints;
+
 // Real camera: the shell owns AVCaptureSession and pushes each frame here.
 - (void)startCameraWithTrigger:(NSString *)trigger
                        onStats:(void (^)(NJStats stats))onStats
