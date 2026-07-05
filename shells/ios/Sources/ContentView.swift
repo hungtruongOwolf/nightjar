@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var parsed: NJParsedRule?
     @State private var zonePolygon: [CGPoint] = []
     @State private var captureVideo = true
+    @State private var ntfyTopic = ""
     @StateObject private var driver = EngineDriver()
     @State private var rules: [RuleItem] = [
         .init(title: "A person appears · Backyard", sub: "Anytime · Notify", icon: "figure.walk",
@@ -64,10 +65,10 @@ struct ContentView: View {
                          onSave: { poly in zonePolygon = poly; addRuleAndGuard() })
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .rules:
-                RulesView(rules: $rules, onStart: { go(.guarding) }, onAdd: { ruleText = ""; go(.chat) })
+                RulesView(rules: $rules, ntfyTopic: $ntfyTopic, onStart: { go(.guarding) }, onAdd: { ruleText = ""; go(.chat) })
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .guarding:
-                GuardView(driver: driver, rules: rules, zone: zonePolygon, onExit: { go(.rules) })
+                GuardView(driver: driver, rules: rules, zone: zonePolygon, ntfyTopic: ntfyTopic, onExit: { go(.rules) })
                     .transition(.opacity)
             }
         }
@@ -232,6 +233,7 @@ struct ConfirmView: View {
 // ─────────────────────────────── S4 RULES ───────────────────────────────
 struct RulesView: View {
     @Binding var rules: [RuleItem]
+    @Binding var ntfyTopic: String
     let onStart: () -> Void
     let onAdd: () -> Void
     private var armed: Int { rules.filter { $0.on }.count }
@@ -263,6 +265,12 @@ struct RulesView: View {
                 HStack(spacing: 10) { Image(systemName: "plus"); Text("Add a rule") }.font(.system(size: 15, weight: .semibold)).foregroundColor(NW.rose)
                     .frame(maxWidth: .infinity).padding(14).overlay(RoundedRectangle(cornerRadius: 16).stroke(NW.muted(0.25), style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
             }
+            HStack(spacing: 10) {
+                Image(systemName: "bell.badge").font(.system(size: 13)).foregroundColor(NW.muted(0.5))
+                TextField("", text: $ntfyTopic, prompt: Text("ntfy topic — push alerts to your phone (optional)").foregroundColor(NW.muted(0.35)))
+                    .font(.system(size: 13)).foregroundColor(NW.cream).textFieldStyle(.plain)
+                    .autocorrectionDisabled(true)
+            }.padding(13).background(NW.card).cornerRadius(14)
             Spacer()
             Button(action: onStart) {
                 Text("Start guarding").font(.system(size: 16, weight: .semibold)).foregroundColor(.white).frame(maxWidth: .infinity).padding(17).background(NW.rose).cornerRadius(16)

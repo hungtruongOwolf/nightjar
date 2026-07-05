@@ -32,6 +32,7 @@ final class EngineDriver: ObservableObject {
     private var batTimer: Timer?
     private var batStart: (Date, Int)?
     private var ruleMeta: [String: RuleItem] = [:]  // ruleId -> the rule, to tag evidence
+    private var ntfyTopic = ""                      // optional real push to your phone
 
     func windowed(minutes: Double) -> WindowStats {
         let cutoff = Date().addingTimeInterval(-minutes * 60)
@@ -53,8 +54,9 @@ final class EngineDriver: ObservableObject {
         samples.removeAll { $0.t < cutoff }
     }
 
-    func start(rules: [RuleItem], zone: [CGPoint]) {
+    func start(rules: [RuleItem], zone: [CGPoint], ntfyTopic: String = "") {
         alertText = nil; samples.removeAll(); synthRing.removeAll()
+        self.ntfyTopic = ntfyTopic
         let armed = rules.filter { $0.on }
         ruleMeta = Dictionary(armed.map { ($0.id.uuidString, $0) }, uniquingKeysWith: { a, _ in a })
         engine.setRules(armed.map { r in
@@ -105,6 +107,7 @@ final class EngineDriver: ObservableObject {
         alerts.insert(AlertRecord(text: text, ruleTitle: meta?.title ?? text, subject: subject,
                                   image: img, frames: clip, date: Date()), at: 0)
         if alerts.count > 12 { alerts.removeLast() }
+        Ntfy.send(topic: ntfyTopic, title: "Nightjar", message: text, image: img)  // no-op if no topic
     }
 
     private func startBattery() {
@@ -162,6 +165,7 @@ struct GuardView: View {
     @ObservedObject var driver: EngineDriver
     var rules: [RuleItem] = []
     var zone: [CGPoint] = []
+    var ntfyTopic: String = ""
     let onExit: () -> Void
 
     private var armedCount: Int { rules.filter { $0.on }.count }
@@ -182,7 +186,7 @@ struct GuardView: View {
             if showAlert { alertOverlay }
         }
         .onAppear {
-            driver.start(rules: rules, zone: zone); since = Date()
+            driver.start(rules: rules, zone: zone, ntfyTopic: ntfyTopic); since = Date()
             // Screenshot hook: NJ_OPEN=monitor|alerts auto-opens that sheet.
             if let o = ProcessInfo.processInfo.environment["NJ_OPEN"] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 18) {
