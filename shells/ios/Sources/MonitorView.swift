@@ -42,6 +42,7 @@ struct MonitorView: View {
                         HStack(spacing: 12) {
                             Bar(label: "VLM compute avoided", pct: Int(s.framesSkippedPct), tint: NW.green)
                         }
+                        Row(k: "Tier-2 model", v: driver.tier2, vColor: driver.tier2.hasPrefix("Smol") ? NW.green : NW.cream)
                         Row(k: "Thermal state", v: thermal().0, vColor: thermal().1)
                         Row(k: "Expensive path (VLM)", v: "\(s.vlmChecks) of \(s.framesProcessed) frames")
                         Row(k: "Perf-per-watt lever", v: "gate skips \(s.framesSkippedPct)% before the VLM")
@@ -51,8 +52,11 @@ struct MonitorView: View {
                     Text("Efficiency isn't a number to hit — it's the design: the cheap NEON gate discards most frames so the expensive VLM (P-cores) runs on a few %. That's the perf-per-watt lever this monitor shows live.")
                         .font(.system(size: 12)).lineSpacing(3).foregroundColor(NW.muted(0.5))
 
-                    if !driver.usingCamera || true {
-                        Text("Note — this build's Tier-2 is the scripted stand-in and recognizes person/motion only; other subjects need the on-device VLM (they won't false-fire). Benchmark numbers of record come from the offline replay harness (make demo → report.md), not this app.")
+                    if driver.tier2.hasPrefix("Smol") {
+                        Text("Tier-2 is the real SmolVLM-500M (INT4) running on-device — it classifies person / vehicle / animal / package from the actual camera. Benchmark numbers of record come from the offline replay harness (make demo → report.md).")
+                            .font(.system(size: 11)).lineSpacing(3).foregroundColor(NW.muted(0.4))
+                    } else {
+                        Text("Note — Tier-2 here is the scripted stand-in (person/motion only); other subjects need the on-device VLM. On the Mac build the real SmolVLM loads automatically when the model is present.")
                             .font(.system(size: 11)).lineSpacing(3).foregroundColor(NW.muted(0.38))
                     }
                     Spacer()

@@ -45,6 +45,7 @@ targets:
     sources:
       - path: Sources
       - path: ../../engine/src
+      - path: ../../engine/vlm/mtmd_vlm_worker.cpp  # real SmolVLM Tier-2 (Mac only)
     info:
       path: Info-Mac.plist
       properties:
@@ -60,3 +61,19 @@ targets:
         CODE_SIGN_STYLE: Manual
         ENABLE_HARDENED_RUNTIME: "NO"
         ENABLE_APP_SANDBOX: "NO"
+        # Real Tier-2 VLM: link brew's llama.cpp / mtmd / ggml (Apple Silicon).
+        GCC_PREPROCESSOR_DEFINITIONS: ["NIGHTJAR_HAS_VLM=1", "$(inherited)"]
+        HEADER_SEARCH_PATHS:
+          - $(SRCROOT)/../../engine/include
+          - $(SRCROOT)/../../engine/vlm
+          - $(SRCROOT)/Sources
+          - /opt/homebrew/opt/llama.cpp/include
+          - /opt/homebrew/opt/ggml/include
+        LIBRARY_SEARCH_PATHS:
+          - /opt/homebrew/opt/llama.cpp/lib
+          - /opt/homebrew/opt/ggml/lib
+        OTHER_LDFLAGS: ["-lllama", "-lmtmd", "-lggml", "-lggml-base"]
+        LD_RUNPATH_SEARCH_PATHS:
+          - /opt/homebrew/lib
+          - /opt/homebrew/opt/llama.cpp/lib
+          - /opt/homebrew/opt/ggml/lib

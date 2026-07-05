@@ -9,6 +9,8 @@ final class EngineDriver: ObservableObject {
     @Published var stats = NJStats()
     @Published var alertText: String?
     @Published var usingCamera = false
+    @Published var tier2 = "loading…"
+    @Published var loading = false
 
     let engine = NightjarEngine()
     private lazy var camera = CameraCapture(engine: engine)
@@ -20,15 +22,23 @@ final class EngineDriver: ObservableObject {
         engine.setZonePolygon(zone.isEmpty ? [] : zone.map(njPoint))
         if CameraCapture.hasCamera {
             usingCamera = true
-            engine.startCamera(withTrigger: trigger,
-                               onStats: { [weak self] s in self?.stats = s },
-                               onAlert: { [weak self] t in self?.alertText = t })
-            camera.start()
+            loading = true
+            // The real VLM loads the model (~1–2s); do it off the main thread so
+            // the UI doesn't freeze on first arm.
+            DispatchQueue.global(qos: .userInitiated).async {
+                self.engine.startCamera(withTrigger: trigger,
+                                        onStats: { [weak self] s in self?.stats = s },
+                                        onAlert: { [weak self] t in self?.alertText = t })
+                self.camera.start()
+                let name = self.engine.tier2Name()
+                DispatchQueue.main.async { self.tier2 = name; self.loading = false }
+            }
         } else {
             usingCamera = false
             engine.startSynthetic(withTrigger: trigger,
                                   onFrame: { [weak self] img, s in self?.frame = img; self?.stats = s },
                                   onAlert: { [weak self] t in self?.alertText = t })
+            tier2 = engine.tier2Name()
         }
     }
     func stop() { camera.stop(); engine.stop() }
@@ -103,12 +113,18 @@ struct GuardView: View {
                     }
                     Spacer()
                     HStack {
-                        Text("\(driver.usingCamera ? "CAMERA" : "SIM") · ZONE “backyard” · \(uptime)")
+                        Text("\(driver.usingCamera ? "CAMERA" : "SIM") · \(driver.tier2) · \(uptime)")
                             .font(NW.mono(9)).tracking(1.2).foregroundColor(NW.muted(0.6))
                             .padding(.horizontal, 12).padding(.vertical, 6).background(Color.black.opacity(0.78)).clipShape(Capsule())
                         Spacer()
                     }
                 }.padding(14).padding(.top, 40)
+                if driver.loading {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(NW.rose)
+                        Text("Loading SmolVLM…").font(.system(size: 13, weight: .semibold)).foregroundColor(NW.creamDim)
+                    }.padding(.horizontal, 18).padding(.vertical, 12).background(Color.black.opacity(0.8)).clipShape(Capsule())
+                }
             }
         }
     }

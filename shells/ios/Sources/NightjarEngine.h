@@ -42,6 +42,9 @@ typedef struct {
 // confirmation screen is the safety net either way.
 + (NJParsedRule *)compileRule:(NSString *)english;
 
+// Which Tier-2 is active after starting: "SmolVLM-500M (INT4)" or "scripted".
+- (NSString *)tier2Name;
+
 // Set the watched zone as a normalized polygon (CGPoint values in [0,1]),
 // before starting. Empty = whole frame. The engine rasterizes it to the gate's
 // block grid so motion outside the zone never wakes the VLM.

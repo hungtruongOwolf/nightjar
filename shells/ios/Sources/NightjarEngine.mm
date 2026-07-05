@@ -24,6 +24,10 @@
 #include "nightjar/temporal_rule.h"
 #include "nightjar/temporal_rule_engine.h"
 
+#if NIGHTJAR_HAS_VLM
+#include "mtmd_vlm_worker.h"  // real SmolVLM Tier-2 (Mac target; links llama.cpp/mtmd)
+#endif
+
 using namespace nightjar;
 
 namespace {
@@ -99,7 +103,6 @@ BlockBitmap rasterize_zone(const ZonePoly& poly, int w, int h) {
 // last) is torn down first, before the objects it points at.
 struct LiveEngine {
     TemporalRuleEngine rules;
-    ScriptedPredicateVlm vlm;
     BlockSink sink;
     Telemetry tel;
     MotionGate overlay_gate;
@@ -107,12 +110,14 @@ struct LiveEngine {
     int zgw = -1, zgh = -1;
     Pipeline pipe;
 
-    LiveEngine(const std::string& subject, const std::string& trig, void (^onAlert)(NSString*), ZonePoly z)
-        : vlm({{"person", true}}, 120),  // scripted Tier-2: only "person" is recognized in this build
-          sink(onAlert),
+    // vlm is borrowed (owned by the bridge, reused across guard sessions so the
+    // model loads only once).
+    LiveEngine(const std::string& subject, const std::string& trig, IPredicateVlm* vlm,
+               void (^onAlert)(NSString*), ZonePoly z)
+        : sink(onAlert),
           overlay_gate(GateConfig{}),
           zone(std::move(z)),
-          pipe(make_cfg(subject), &rules, &vlm, &sink, &tel) {
+          pipe(make_cfg(subject), &rules, vlm, &sink, &tel) {
         rules.set_rules({rule_for(subject, trig)});
         pipe.set_clock([] { return Clock{12 * 60, (int64_t)std::time(nullptr)}; });
         pipe.start();
@@ -212,10 +217,44 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     void (^_onStats)(NJStats);
     ZonePoly _zone;
     std::string _subject;
+    std::shared_ptr<IPredicateVlm> _vlm;  // loaded once, reused across sessions
+    NSString* _vlmName;
 }
 
 - (void)setSubject:(NSString*)subjectKey {
     _subject = subjectKey.length ? subjectKey.UTF8String : "person";
+}
+
+- (NSString*)tier2Name {
+    return _vlmName ?: @"scripted";
+}
+
+// Load the Tier-2 VLM once: the real SmolVLM (mtmd) when the model files and
+// llama.cpp are available (Mac), otherwise the scripted stand-in.
+- (void)ensureVlm {
+    if (_vlm) return;
+#if NIGHTJAR_HAS_VLM
+    NSArray<NSString*>* dirs = @[
+        [[NSBundle mainBundle] resourcePath] ?: @"",
+        [NSString stringWithUTF8String:(getenv("NIGHTJAR_MODELS") ?: "")],
+        @"/Users/hung.truong/Claude/Hackathon/nightjar/models",
+    ];
+    for (NSString* d in dirs) {
+        if (!d.length) continue;
+        NSString* model = [d stringByAppendingPathComponent:@"SmolVLM-500M-Instruct-Q4_0.gguf"];
+        NSString* mmproj = [d stringByAppendingPathComponent:@"mmproj-SmolVLM-500M-Instruct-f16.gguf"];
+        NSFileManager* fm = [NSFileManager defaultManager];
+        if (![fm fileExistsAtPath:model] || ![fm fileExistsAtPath:mmproj]) continue;
+        MtmdConfig cfg;
+        cfg.model_path = model.UTF8String;
+        cfg.mmproj_path = mmproj.UTF8String;
+        cfg.encoder_use_gpu = true;
+        auto worker = std::make_shared<MtmdVlmWorker>(cfg);
+        if (worker->ok()) { _vlm = worker; _vlmName = @"SmolVLM-500M (INT4)"; return; }
+    }
+#endif
+    _vlm = std::make_shared<ScriptedPredicateVlm>(std::map<std::string, bool>{{"person", true}}, 120);
+    _vlmName = @"scripted";
 }
 
 - (void)setZonePolygon:(NSArray<NSValue*>*)points {
@@ -235,7 +274,8 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
                        onAlert:(void (^)(NSString*))onAlert {
     [self stop];
     if (_subject.empty()) _subject = "person";
-    _engine = std::make_unique<LiveEngine>(_subject, trigger ? trigger.UTF8String : "appears", onAlert, _zone);
+    [self ensureVlm];
+    _engine = std::make_unique<LiveEngine>(_subject, trigger ? trigger.UTF8String : "appears", _vlm.get(), onAlert, _zone);
     _onStats = [onStats copy];
     _seq = 0;
 }
@@ -261,7 +301,8 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
                           onAlert:(void (^)(NSString*))onAlert {
     [self stop];
     if (_subject.empty()) _subject = "person";
-    _engine = std::make_unique<LiveEngine>(_subject, trigger ? trigger.UTF8String : "appears", onAlert, _zone);
+    [self ensureVlm];
+    _engine = std::make_unique<LiveEngine>(_subject, trigger ? trigger.UTF8String : "appears", _vlm.get(), onAlert, _zone);
     _running = true;
     std::atomic<bool>* running = &_running;
     LiveEngine* eng = _engine.get();
