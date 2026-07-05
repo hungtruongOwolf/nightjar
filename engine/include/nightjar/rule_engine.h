@@ -23,6 +23,7 @@ struct AlertDecision {
     Subject subject = Subject::Person;
     std::vector<Action> actions;
     int64_t unix_s = 0;
+    std::string label;  // human phrase for the alert (e.g. the rule's English); optional
 };
 
 // The runtime decision point (design doc §5.5). Plain deterministic code — NO

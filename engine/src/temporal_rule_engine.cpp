@@ -69,8 +69,9 @@ std::vector<AlertDecision> TemporalRuleEngine::observe(const Observation& obs) {
         s.prev_present = present;
 
         if (fired && passes_gates(rule, obs, s)) {
-            decisions.push_back(AlertDecision{rule.id, subject_of(rule.predicate), rule.actions,
-                                              obs.unix_s});
+            AlertDecision d{rule.id, subject_of(rule.predicate), rule.actions, obs.unix_s, {}};
+            d.label = rule.raw_text;  // the user's English rule = the alert phrase
+            decisions.push_back(std::move(d));
         }
     }
     return decisions;

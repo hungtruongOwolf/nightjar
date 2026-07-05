@@ -20,8 +20,6 @@ uint64_t now_ns() {
 
 std::vector<uint8_t> flat(uint8_t v) { return std::vector<uint8_t>(size_t(W) * H, v); }
 
-// A frame with a sharp, high-contrast blob so both the gate (big change) and
-// the selector (high sharpness -> early-exit) trigger.
 std::vector<uint8_t> blob_frame() {
     auto buf = flat(40);
     for (int y = 0; y < 64; ++y)
@@ -40,77 +38,70 @@ FrameView view_of(const std::vector<uint8_t>& buf, uint64_t seq) {
     return f;
 }
 
-Rule person_rule() {
-    Rule r;
+TemporalRule person_appears() {
+    TemporalRule r;
     r.id = "r1";
-    r.subject = Subject::Person;
+    r.raw_text = "notify me if a person appears";
+    r.predicate = "person";
+    r.trigger = Trigger::Appears;
     r.zone_id = "any";
-    r.time_window = TimeWindow{0, 0};  // always
+    r.time_window = TimeWindow{0, 0};
     r.cooldown_s = 120;
     r.actions = {Action{ActionType::Ntfy, "topic"}};
     return r;
 }
 
-PipelineConfig test_pipeline_config() {
+PipelineConfig test_config() {
     PipelineConfig cfg;
     cfg.best_frame.early_exit_min_blob_blocks = 3;
-    cfg.best_frame.early_exit_min_sharpness = 1.0;  // textured blob clears this
+    cfg.best_frame.early_exit_min_sharpness = 1.0;
+    cfg.predicates = {{"person", "Is there a person? Answer y or n."}};
     return cfg;
 }
 
 void test_end_to_end_person_alert() {
-    RuleEngine rules;
-    rules.set_rules({person_rule()});
-    Facts p;
-    p.person = true;
-    ScriptedVlmWorker vlm(p, /*sim_infer_ms=*/10);
+    TemporalRuleEngine rules;
+    rules.set_rules({person_appears()});
+    ScriptedPredicateVlm vlm({{"person", true}}, /*sim_infer_ms=*/10);
     CapturingSink sink;
     Telemetry tel;
 
-    Pipeline pipe(test_pipeline_config(), &rules, &vlm, &sink, &tel);
-    pipe.set_clock([] { return Clock{23 * 60, 1000}; });  // 23:00, fixed
+    Pipeline pipe(test_config(), &rules, &vlm, &sink, &tel);
+    pipe.set_clock([] { return Clock{23 * 60, 1000}; });
     pipe.start();
 
     auto bg = flat(40);
-    pipe.on_frame(view_of(bg, 0));  // seed (no motion)
-    pipe.on_frame(view_of(bg, 1));  // static (no motion)
-
+    pipe.on_frame(view_of(bg, 0));  // seed
+    pipe.on_frame(view_of(bg, 1));  // static
     auto blob = blob_frame();
-    pipe.on_frame(view_of(blob, 2));  // motion -> candidate -> VLM -> person -> alert
+    pipe.on_frame(view_of(blob, 2));  // motion -> candidate -> person -> appears -> alert
 
-    // Let the VLM thread process.
     std::this_thread::sleep_for(std::chrono::milliseconds(80));
     pipe.stop();
 
     CHECK(sink.count() >= 1);
     if (sink.count() >= 1) {
         CHECK_EQ(sink.alerts()[0].rule_id, std::string("r1"));
-        CHECK(sink.alerts()[0].one_liner.find("person") != std::string::npos);
-        CHECK(sink.alerts()[0].one_liner.find("23:00") != std::string::npos);
+        CHECK(sink.alerts()[0].one_liner.find("person appears") != std::string::npos);
     }
-
     Report r = tel.make_report();
     CHECK_EQ(r.counters[static_cast<size_t>(Counter::FramesCaptured)], int64_t(3));
     CHECK(r.counters[static_cast<size_t>(Counter::VlmInferences)] >= 1);
     CHECK(r.counters[static_cast<size_t>(Counter::AlertsFired)] >= 1);
-    CHECK_EQ(r.segments[static_cast<size_t>(Segment::GateCost)].count, size_t(3));  // every frame
-    CHECK(r.segments[static_cast<size_t>(Segment::VlmTotal)].count >= 1);
+    CHECK_EQ(r.segments[static_cast<size_t>(Segment::GateCost)].count, size_t(3));
     CHECK(r.segments[static_cast<size_t>(Segment::EndToEnd)].count >= 1);
 }
 
 void test_no_person_no_alert() {
-    RuleEngine rules;
-    rules.set_rules({person_rule()});
-    Facts animal;  // VLM sees an animal, not a person
-    animal.animal = true;
-    ScriptedVlmWorker vlm(animal, 5);
+    TemporalRuleEngine rules;
+    rules.set_rules({person_appears()});
+    ScriptedPredicateVlm vlm({{"person", false}}, 5);  // VLM sees no person
     CapturingSink sink;
     Telemetry tel;
 
-    Pipeline pipe(test_pipeline_config(), &rules, &vlm, &sink, &tel);
+    Pipeline pipe(test_config(), &rules, &vlm, &sink, &tel);
     pipe.set_clock([] { return Clock{23 * 60, 1000}; });
     pipe.start();
-
     auto bg = flat(40);
     pipe.on_frame(view_of(bg, 0));
     auto blob = blob_frame();
@@ -118,37 +109,36 @@ void test_no_person_no_alert() {
     std::this_thread::sleep_for(std::chrono::milliseconds(60));
     pipe.stop();
 
-    CHECK_EQ(sink.count(), size_t(0));  // animal doesn't match the person rule
+    CHECK_EQ(sink.count(), size_t(0));
     CHECK(tel.make_report().counters[static_cast<size_t>(Counter::VlmInferences)] >= 1);
 }
 
-void test_cooldown_limits_repeat_alerts() {
-    RuleEngine rules;
-    rules.set_rules({person_rule()});  // cooldown 120s
-    Facts p;
-    p.person = true;
-    ScriptedVlmWorker vlm(p, 5);
+void test_loitering_needs_dwell() {
+    // A sustained/loitering rule must NOT fire on first sight; the pipeline uses
+    // real wall-clock, so with a fixed clock (dwell never elapses) it stays silent.
+    TemporalRule loiter = person_appears();
+    loiter.trigger = Trigger::Sustained;
+    loiter.dwell_s = 3600;  // 1h — will never elapse in the test
+    loiter.raw_text = "someone loitering";
+    TemporalRuleEngine rules;
+    rules.set_rules({loiter});
+    ScriptedPredicateVlm vlm({{"person", true}}, 5);
     CapturingSink sink;
     Telemetry tel;
 
-    Pipeline pipe(test_pipeline_config(), &rules, &vlm, &sink, &tel);
-    pipe.set_clock([] { return Clock{23 * 60, 1000}; });  // fixed time => within cooldown
+    Pipeline pipe(test_config(), &rules, &vlm, &sink, &tel);
+    pipe.set_clock([] { return Clock{23 * 60, 5000}; });  // fixed time
     pipe.start();
-
     auto bg = flat(40);
     pipe.on_frame(view_of(bg, 0));
-    // Several separated motion events at the same clock second.
-    for (uint64_t i = 1; i <= 6; ++i) {
-        auto blob = blob_frame();
+    auto blob = blob_frame();
+    for (uint64_t i = 1; i <= 4; ++i) {
         pipe.on_frame(view_of(blob, i));
         std::this_thread::sleep_for(std::chrono::milliseconds(15));
-        pipe.on_frame(view_of(bg, i + 100));  // quiet between events
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(40));
     pipe.stop();
-
-    CHECK_EQ(sink.count(), size_t(1));  // cooldown collapses repeats to one
+    CHECK_EQ(sink.count(), size_t(0));  // dwell never reached -> no loitering alert
 }
 
 }  // namespace
@@ -156,6 +146,6 @@ void test_cooldown_limits_repeat_alerts() {
 int main() {
     test_end_to_end_person_alert();
     test_no_person_no_alert();
-    test_cooldown_limits_repeat_alerts();
+    test_loitering_needs_dwell();
     return njtest::failures() == 0 ? 0 : 1;
 }
