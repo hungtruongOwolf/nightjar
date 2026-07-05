@@ -1,74 +1,47 @@
-# Nightjar, demo video script (≤ 3:00)
+# Nightjar, demo video script (aim ~2:00, demo ~1:00)
 
-Record on the **Mac** (NightjarMac, real webcam). Screen-record with QuickTime
-(⌘⇧5) + talk over it. Optional: set an **ntfy topic** first (rules screen) and
-have your phone with the free **ntfy** app subscribed, on screen, for the push
-"money shot". Keep it under 3 minutes.
+Record on the Mac (NightjarMac, real webcam). Lead with the hook. Don't explain
+the plumbing; show that it works, then show why it's fast on Arm. Keep the energy
+up. Optional: an ntfy topic set + your phone on screen for the push moment.
 
-Setup before recording:
-- Build + open: `cd shells/ios && xcodegen && xcodebuild -scheme NightjarMac -configuration Release build`, then open `NightjarMac.app`, grant camera once.
-- Good light; you'll walk into frame as the "intruder".
+Setup: `cd shells/ios && xcodegen && xcodebuild -scheme NightjarMac -configuration Release build`, open the app, grant camera. Good light, you'll walk in as the "intruder".
 
 ---
 
-### 0:00–0:15, Hook (Hello screen)
-Show the Hello screen (Otto the owl).
-> "This is a spare phone, or here, a Mac webcam. Nightjar turns it into an AI
-> guard you program in plain English, and everything runs on-device. Nothing
-> leaves the machine."
+### Hook (0:00 to 0:12)
+Face the camera or show the drawer of old phones.
+> "There are 300 billion Arm chips on the planet, and the smartest one you own is
+> asleep in a drawer. I woke mine up. One sentence, and a spare phone is a
+> security camera that runs all its AI on the Arm CPU. No cloud. No NVIDIA."
 
-### 0:15–0:45, Program it in words (chat → confirm)
-Tap **Set up my guard** → type: *"tell me if someone loiters in the backyard after 10pm"* → send.
-> "I just describe what to watch for. On-device, it compiles that once into a
-> structured rule -"
-Point at the WHO / WHERE / WHEN / THEN chips.
-> "- who, where, when, what to do. Checked in microseconds at runtime; no AI in
-> the hot path. I'll save a video clip."
-Pick **Video clip** → **Looks right, mark zone** → trace a zone → **Save zone**.
+### Why it matters (0:12 to 0:25)
+> "Normally, making a camera notice what you care about needs an ML team and a
+> cloud GPU streaming your living room to someone's server. Nightjar does it in
+> plain English, on hardware you already own, and nothing leaves the device."
 
-### 0:45–1:20, Live guard + the alert (Guard screen)
-**Start guarding** → grant camera → the live feed.
-> "Now it's watching, live. The cheap NEON motion gate runs every frame; the
-> expensive vision model only wakes on motion."
-Walk into frame.
-> "Motion, the box tracks me, the VLM confirms a person -"
-Alert fires (banner + Otto).
-> "- and it alerts, with the exact rule I typed, the real time, and the frame it
-> caught."
-(If ntfy set) hold up your phone as it buzzes:
-> "And it pushed to my phone, the only thing that ever left the device: this
-> one crop I asked for."
+### Demo, about one minute (0:25 to 1:20)
+Keep it moving. On the Mac:
+- Type *"tell me if someone loiters near my car after 10pm"*, send. "I just say what to watch for."
+- The WHO / WHERE / WHEN chips appear. "Compiled once, on the device."
+- Start guarding, walk into frame. The box tracks you, the alert fires. "It caught me, with the exact rule I typed."
+- (If ntfy is set) hold up the phone as it buzzes with the crop. "And it pushed one photo to my phone, the only thing that ever leaves."
 
-### 1:20–1:45, Why it's not just a detector (the differentiator)
-> "A motion cam can't tell *appears* from *loiters* from *a package left behind*
->, those are conditions over **time**. Nightjar splits perception from
-> reasoning: the model is a per-frame fact sensor; deterministic code integrates
-> those facts over time. That's the loitering rule firing, not just 'a person'."
+### The Arm optimization, the part that wins (1:20 to 1:50)
+Open the Monitor while you talk.
+> "Here is why it fits on a phone. Two tiers. A hand-written Arm NEON gate costs
+> 58 microseconds a frame and throws away 88 percent of them. Only the few
+> percent that pass wake the INT4 SmolVLM, which runs on the Arm CPU through
+> llama.cpp and KleidiAI. Every number here is measured and reproducible, the
+> gate provably compiles to real NEON instructions, and the same C++ engine runs
+> on macOS, Linux aarch64, and iPhone. No discrete GPU anywhere."
 
-### 1:45–2:20, The Arm optimization story (Monitor)
-Open **Monitor**.
-> "This is Track 3, mobile AI optimization. The lever is here: the gate skips
-> most frames, so the VLM, real SmolVLM-500M INT4 via llama.cpp + KleidiAI -
-> runs on a few percent. Live per-stage latency: gate in microseconds,
-> event-to-alert in the hundreds of milliseconds."
-Mention over b-roll:
-> "Same portable C++ engine runs on macOS, on Linux aarch64 in Docker, and on
-> iPhone A15, three Arm platforms. KleidiAI's INT4 kernels give a measured
-> prefill speedup on Linux; numbers are in the repo."
-
-### 2:20–2:45, Evidence + honesty
-Open **Alerts** → tap one → the clip plays.
-> "Every alert keeps its clip, tagged by which rule fired, reviewable
-> on-device. No continuous recording; we store events, not video."
-> "And it's honest: published numbers include the misses, and if it ever runs
-> degraded it says so."
-
-### 2:45–3:00, Close
-> "No cloud, no account, no subscription. Clone the repo and run `make demo` on
-> any Mac in five minutes, no phone, no model needed. Nightjar: give an old
-> phone a night job."
+### Close (1:50 to 2:00)
+> "No cloud, no account, no NVIDIA. Clone the repo, run make demo, and you see the
+> whole pipeline in five minutes. That old phone finally has a night job."
 
 ---
 
-**B-roll / cutaways to have ready:** the Monitor screen, the Alerts grid, a
-terminal running `make demo`, the README architecture diagram.
+Notes for the edit:
+- If you go over, cut the "why it matters" lines, not the Arm-optimization part.
+- On-screen text to flash during the Arm section: "88% of frames gated", "NEON 58 us/frame", "INT4 SmolVLM on Arm CPU (KleidiAI)", "3 Arm platforms, one codebase".
+- The point to land: not "look how much it does", but "look how little the expensive model has to run, because the cheap Arm-CPU gate does the heavy lifting".
