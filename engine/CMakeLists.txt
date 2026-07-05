@@ -114,3 +114,6 @@ endif()
 
 add_executable(nightjar_ablation tools/nightjar_ablation.cpp)
 target_link_libraries(nightjar_ablation PRIVATE nightjar)
+
+add_executable(nightjar_concurrency_bench tools/nightjar_concurrency_bench.cpp)
+target_link_libraries(nightjar_concurrency_bench PRIVATE nightjar)
