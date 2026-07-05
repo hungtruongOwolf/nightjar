@@ -6,7 +6,7 @@
 
 > Type *"tell me if someone loiters near my car after 10pm."* Nightjar compiles that once, on the phone, into a deterministic rule, then watches: a hand-written NEON motion gate (58 µs/frame) feeds an INT4 vision-language model only the ~1–5 % of frames that matter. No cloud. No account. No subscription. Airplane mode and it still works.
 
-Built for the **Arm Create: AI Optimization Challenge 2026 — Track 3 (Mobile AI, "camera intelligence")**. All inference runs locally on Arm64 via llama.cpp + KleidiAI.
+Built for the **Arm Create: AI Optimization Challenge 2026 — Track 3 (Mobile AI, "camera intelligence")**. Everything runs on the **Arm SoC**: the LLM on the **Arm CPU** via **KleidiAI** INT4 kernels, the motion gate in hand-written **NEON** (CPU). **No NVIDIA, no CUDA, no discrete GPU, no cloud** — the vision encoder only *optionally* uses the phone's own integrated GPU (Apple-Silicon Metal, part of the same Arm SoC), and a CPU-only path exists.
 
 <p align="center">
   <img src="docs/media/flow.gif" width="270" alt="Nightjar product flow: hello → type a rule → confirm → mark zone → watch list → live guard → alert"/>
@@ -29,15 +29,22 @@ make demo    # full pipeline on a synthetic clip → alerts + a self-generated r
 
 ```mermaid
 flowchart LR
-  cam["Camera<br/>640x480, 30fps"] --> gate["NEON motion gate<br/>58us/frame - E-cores"]
-  gate -->|"~1-5% of frames"| best["Best-frame<br/>crop to 448"]
-  best --> slot["ConflatingSlot<br/>keep-latest"]
-  slot --> vlm["SmolVLM-500M INT4<br/>fact sensor - P-cores"]
-  vlm --> deb["debounce"]
-  deb --> fsm["Temporal rule engine<br/>deterministic - us"]
-  fsm --> alert["ntfy push<br/>+ evidence clip"]
-  gate -.->|"discard 88%"| x["drop"]
+  cam["📷 Camera<br/>640×480 · 30 fps"]:::io --> gate["<b>NEON motion gate</b><br/>~58 µs/frame · Arm CPU"]:::cheap
+  gate -->|"~1–5% of frames"| best["Best-frame<br/>crop → 448"]:::mid
+  best --> slot["ConflatingSlot<br/>keep-latest"]:::mid
+  slot --> vlm["<b>SmolVLM-500M INT4</b><br/>KleidiAI · Arm CPU"]:::hot
+  vlm --> deb["debounce<br/>(hysteresis)"]:::mid
+  deb --> fsm["<b>Temporal rule engine</b><br/>deterministic · µs"]:::brain
+  fsm --> alert["🔔 ntfy push<br/>+ evidence clip"]:::io
+  gate -.->|"discard ~88%"| x["drop"]:::drop
+  classDef cheap fill:#0f3d24,stroke:#4ade80,color:#eafff2,stroke-width:2px;
+  classDef hot fill:#4c0519,stroke:#f43f5e,color:#ffe4ec,stroke-width:2px;
+  classDef mid fill:#241b16,stroke:#a8794f,color:#f6efe8;
+  classDef brain fill:#14294d,stroke:#60a5fa,color:#e6f0ff,stroke-width:2px;
+  classDef io fill:#0d0a08,stroke:#8a8078,color:#f6efe8;
+  classDef drop fill:#171717,stroke:#555,color:#888,stroke-dasharray:3 3;
 ```
+<sub>Green = cheap Arm-CPU gate on every frame · rose = the expensive VLM (KleidiAI, CPU) on the ~1–5% that pass · blue = deterministic µs reasoning. ~88% of frames never reach the VLM.</sub>
 
 ---
 
@@ -96,15 +103,21 @@ The core idea — and why it runs on a phone at all — is decoupling the **expe
 
 ```mermaid
 flowchart TB
-  subgraph P ["Perception - small VLM, per-frame, noisy"]
+  subgraph P ["🔎 PERCEPTION — small VLM, per-frame, noisy"]
     direction LR
-    q["is there a person? a package?  -> y/n"] --> dbn["debounce (hysteresis)"]
+    q["“is there a person? a package?” → y/n"]:::hot --> dbn["debounce<br/>(hysteresis)"]:::mid
   end
-  subgraph R ["Reasoning - deterministic, us, explainable"]
+  subgraph R ["🧠 REASONING — deterministic, µs, explainable"]
     direction LR
-    tl["temporal FSM: appears - loiter - left-behind - theft"]
+    tl["temporal FSM<br/>appears · loiter · left-behind · theft"]:::brain
   end
-  P --> R --> a["alert + evidence clip + fact timeline"]
+  P --> R --> a["🔔 alert + evidence clip + fact timeline"]:::io
+  classDef hot fill:#4c0519,stroke:#f43f5e,color:#ffe4ec,stroke-width:2px;
+  classDef mid fill:#241b16,stroke:#a8794f,color:#f6efe8;
+  classDef brain fill:#14294d,stroke:#60a5fa,color:#e6f0ff,stroke-width:2px;
+  classDef io fill:#0d0a08,stroke:#8a8078,color:#f6efe8;
+  style P fill:#1a0a0f,stroke:#f43f5e,color:#ffd9e2;
+  style R fill:#0c1830,stroke:#60a5fa,color:#dbeafe;
 ```
 
 One portable **C++ engine**, two thin shells (iOS SwiftUI + macOS replay). The gate runs on a `.utility` QoS queue (E-cores); the VLM on `.userInitiated` (P-cores); a `ConflatingSlot` decouples them so the fast path never blocks on the slow one.
