@@ -87,11 +87,47 @@ void test_preroll_ring_bounded() {
     fs::remove_all(cfg.dir);
 }
 
+GrayImage frame320(uint8_t base, int blob_x) {
+    GrayImage g;
+    g.width = 320;
+    g.height = 240;
+    g.pixels.assign(size_t(320) * 240, base);
+    for (int y = 100; y < 148; ++y)
+        for (int x = blob_x; x < blob_x + 48 && x < 320; ++x) g.pixels[size_t(y) * 320 + x] = 200;
+    return g;
+}
+
+void test_differential_mode_writes_keyframe_plus_deltas() {
+    ClipConfig cfg;
+    cfg.dir = fresh_dir("diff");
+    cfg.pre_roll_frames = 2;
+    cfg.post_roll_frames = 3;
+    cfg.differential = true;  // keyframe + block deltas
+    EventClipStore store(cfg);
+
+    for (int i = 0; i < 2; ++i) store.on_frame(frame320(50, 20 + i * 4));  // pre-roll
+    std::string clip = store.begin_event("e1");
+    for (int i = 0; i < 3; ++i) store.on_frame(frame320(50, 30 + i * 4));  // post-roll
+    store.flush();
+
+    // Expect exactly one keyframe (.jpg) and the rest as .delta.
+    size_t jpg = 0, delta = 0;
+    std::error_code ec;
+    for (auto& e : fs::directory_iterator(clip, ec)) {
+        if (e.path().extension() == ".jpg") ++jpg;
+        else if (e.path().extension() == ".delta") ++delta;
+    }
+    CHECK_EQ(jpg, size_t(1));      // one keyframe
+    CHECK_EQ(delta, size_t(4));    // 5 frames total -> 1 key + 4 deltas
+    fs::remove_all(cfg.dir);
+}
+
 }  // namespace
 
 int main() {
     test_clip_has_preroll_and_postroll();
     test_cap_evicts_oldest();
     test_preroll_ring_bounded();
+    test_differential_mode_writes_keyframe_plus_deltas();
     return njtest::failures() == 0 ? 0 : 1;
 }

@@ -36,6 +36,11 @@ public:
     // Reconstruct the full frame sequence (lossless w.r.t. the input frames).
     std::vector<GrayImage> decode(const Encoded& enc) const;
 
+    // Streaming API (used by EventClipStore's writer): the delta bytes for one
+    // frame given the previous frame; and applying a delta onto a previous frame.
+    std::vector<uint8_t> encode_frame(const GrayImage& cur, const GrayImage& prev) const;
+    void apply_delta(GrayImage& frame, const std::vector<uint8_t>& delta) const;
+
     // Total serialized bytes: keyframe (as raw) + all deltas. (For the JPEG
     // keyframe size, encode the keyframe with jpeg_encoder separately.)
     static size_t delta_bytes(const Encoded& enc);

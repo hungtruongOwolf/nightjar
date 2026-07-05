@@ -9,6 +9,7 @@
 #include <thread>
 
 #include "nightjar/clip_encoder.h"
+#include "nightjar/differential_clip_codec.h"
 #include "nightjar/pgm.h"
 
 namespace nightjar {
@@ -23,6 +24,10 @@ struct ClipConfig {
     // the harness can pass pgm_encoder() for lossless, the iOS shell a hardware
     // HEVC encoder. Frames are already downscaled + cropped upstream.
     ClipEncoder encoder = jpeg_encoder(70);
+    // Inter-frame differential storage: keyframe (via `encoder`) + block deltas
+    // for the rest (a further 2.5x+ on mostly-static clips). Frame dims must be
+    // multiples of 16. When on, `encoder` is used only for the keyframe.
+    bool differential = false;
 };
 
 // Bounded, rotating on-device clip storage — the answer to "camera memory is

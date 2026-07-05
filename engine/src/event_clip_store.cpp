@@ -71,15 +71,35 @@ void EventClipStore::worker_loop() {
     std::string cur_dir;
     int cur_idx = 0;
     int remaining_post = 0;
+    DifferentialClipCodec codec;   // for differential mode
+    GrayImage prev_frame;          // previous written frame (differential)
+    bool have_prev = false;
 
-    auto write_frame = [&](const GrayImage& f) {
-        const EncodedFrame ef = config_.encoder(f);
-        char name[64];
-        std::snprintf(name, sizeof(name), "frame_%04d.%s", cur_idx++, ef.ext.c_str());
+    auto write_bytes = [&](const std::string& name, const uint8_t* data, size_t n) {
         std::FILE* fp = std::fopen((fs::path(cur_dir) / name).string().c_str(), "wb");
         if (fp) {
-            std::fwrite(ef.bytes.data(), 1, ef.bytes.size(), fp);
+            std::fwrite(data, 1, n, fp);
             std::fclose(fp);
+        }
+    };
+
+    auto write_frame = [&](const GrayImage& f) {
+        char name[64];
+        if (config_.differential && have_prev) {
+            // Inter-frame delta: only the blocks that changed vs the previous frame.
+            const std::vector<uint8_t> delta = codec.encode_frame(f, prev_frame);
+            std::snprintf(name, sizeof(name), "frame_%04d.delta", cur_idx++);
+            write_bytes(name, delta.data(), delta.size());
+            prev_frame = f;
+        } else {
+            // Keyframe (or non-differential): full frame via the encoder.
+            const EncodedFrame ef = config_.encoder(f);
+            std::snprintf(name, sizeof(name), "frame_%04d.%s", cur_idx++, ef.ext.c_str());
+            write_bytes(name, ef.bytes.data(), ef.bytes.size());
+            if (config_.differential) {
+                prev_frame = f;
+                have_prev = true;
+            }
         }
     };
 
@@ -104,6 +124,7 @@ void EventClipStore::worker_loop() {
         } else {  // Begin
             cur_dir = cmd.dir;
             cur_idx = 0;
+            have_prev = false;  // each clip starts with a fresh keyframe
             for (const GrayImage& f : preroll) write_frame(f);  // dump the pre-roll context
             remaining_post = config_.post_roll_frames;
 
