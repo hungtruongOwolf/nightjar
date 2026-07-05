@@ -128,6 +128,8 @@ Every optimization is a real number, not a claim. iPhone A15 figures are pending
 
 **End-to-end (real SmolVLM, encoder on Metal, LLM on CPU):** VLM `p50 149 ms`, event->alert `p50 174 ms / p99 666 ms`. ISA: `FEAT_DotProd=1 - FEAT_I8MM=1 - FEAT_SME=0`.
 
+**Three Arm platforms, one source:** the portable engine builds and passes its full test suite on **macOS (M2 Max)**, **Linux aarch64** (`Dockerfile.linux-arm64`), and **iPhone (Simulator-verified today, A15 pending a cable)**. On Linux aarch64 the **KleidiAI** INT4 kernels give **+7.2% prefill** (the image-token regime that dominates VLM latency) — measured on/off, honest reading in [`bench/kleidiai_results.md`](bench/kleidiai_results.md).
+
 The six mobile constraints the track names:
 
 | model size | memory | responsiveness | battery | offline | TTFT |
@@ -148,6 +150,19 @@ flowchart LR
 ```
 
 A bounded, rotating on-device store (hard cap, oldest evicted). A clip is a *span of frames* (real evidence), never a single image. On iOS the same encoder seam takes the hardware HEVC encoder (near-zero energy).
+
+---
+
+## The app
+
+The iOS shell is intentionally thin — **0% business logic in Swift**. It compiles the portable C++ engine straight in and drives it through an Obj-C++ bridge; every decision is made in C++. Below, running on the iOS Simulator: the *same* engine, replaying a synthetic clip through the *real* pipeline (Tier-2 is the scripted VLM, so no model or camera is needed). One rule fires on a **rising edge** (`appeared`), the other on **sustained dwell** (`present 2s`) — a distinction a detector can't make — with live telemetry.
+
+<p align="center">
+  <img src="shells/ios/screenshots/02-appears-alert.png" width="31%" alt="Nightjar iOS — person appears alert"/>
+  <img src="shells/ios/screenshots/03-loiter-alert.png" width="31%" alt="Nightjar iOS — loitering alert"/>
+</p>
+
+> Build it yourself: `cd shells/ios && xcodegen && xcodebuild -scheme Nightjar -sdk iphonesimulator build`. No signing, no model, no device required.
 
 ---
 
