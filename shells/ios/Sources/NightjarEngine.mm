@@ -46,29 +46,29 @@ private:
     void (^cb_)(NSString*);
 };
 
-TemporalRule rule_for(const std::string& trigger) {
+TemporalRule rule_for(const std::string& subject, const std::string& trigger) {
     TemporalRule r;
-    r.predicate = "person";
+    r.predicate = subject;
     r.zone_id = "any";
     r.time_window = TimeWindow{0, 24 * 60};  // any time (real camera is tested by day)
     r.cooldown_s = 8;
     r.actions = {Action{ActionType::Ntfy, "nightjar"}};
     if (trigger == "loiter") {
         r.id = "loiter";
-        r.raw_text = "tell me if someone loiters in the backyard";
+        r.raw_text = "tell me if a " + subject + " loiters in the backyard";
         r.trigger = Trigger::Sustained;
         r.dwell_s = 3;
     } else {
         r.id = "appears";
-        r.raw_text = "notify me if a person appears in the backyard";
+        r.raw_text = "notify me if a " + subject + " appears in the backyard";
         r.trigger = Trigger::Appears;
     }
     return r;
 }
 
-PipelineConfig make_cfg() {
+PipelineConfig make_cfg(const std::string& subject) {
     PipelineConfig cfg;
-    cfg.predicates = {{"person", "Is there a person in this image? Answer y or n."}};
+    cfg.predicates = {{subject, "Is there a " + subject + " in this image? Answer y or n."}};
     return cfg;
 }
 
@@ -107,13 +107,13 @@ struct LiveEngine {
     int zgw = -1, zgh = -1;
     Pipeline pipe;
 
-    LiveEngine(const std::string& trig, void (^onAlert)(NSString*), ZonePoly z)
-        : vlm({{"person", true}}, 120),
+    LiveEngine(const std::string& subject, const std::string& trig, void (^onAlert)(NSString*), ZonePoly z)
+        : vlm({{"person", true}}, 120),  // scripted Tier-2: only "person" is recognized in this build
           sink(onAlert),
           overlay_gate(GateConfig{}),
           zone(std::move(z)),
-          pipe(make_cfg(), &rules, &vlm, &sink, &tel) {
-        rules.set_rules({rule_for(trig)});
+          pipe(make_cfg(subject), &rules, &vlm, &sink, &tel) {
+        rules.set_rules({rule_for(subject, trig)});
         pipe.set_clock([] { return Clock{12 * 60, (int64_t)std::time(nullptr)}; });
         pipe.start();
     }
@@ -211,6 +211,11 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     uint64_t _seq;
     void (^_onStats)(NJStats);
     ZonePoly _zone;
+    std::string _subject;
+}
+
+- (void)setSubject:(NSString*)subjectKey {
+    _subject = subjectKey.length ? subjectKey.UTF8String : "person";
 }
 
 - (void)setZonePolygon:(NSArray<NSValue*>*)points {
@@ -229,7 +234,8 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
                        onStats:(void (^)(NJStats))onStats
                        onAlert:(void (^)(NSString*))onAlert {
     [self stop];
-    _engine = std::make_unique<LiveEngine>(trigger ? trigger.UTF8String : "appears", onAlert, _zone);
+    if (_subject.empty()) _subject = "person";
+    _engine = std::make_unique<LiveEngine>(_subject, trigger ? trigger.UTF8String : "appears", onAlert, _zone);
     _onStats = [onStats copy];
     _seq = 0;
 }
@@ -254,7 +260,8 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
                           onFrame:(void (^)(CGImageRef, NJStats))onFrame
                           onAlert:(void (^)(NSString*))onAlert {
     [self stop];
-    _engine = std::make_unique<LiveEngine>(trigger ? trigger.UTF8String : "appears", onAlert, _zone);
+    if (_subject.empty()) _subject = "person";
+    _engine = std::make_unique<LiveEngine>(_subject, trigger ? trigger.UTF8String : "appears", onAlert, _zone);
     _running = true;
     std::atomic<bool>* running = &_running;
     LiveEngine* eng = _engine.get();
@@ -281,10 +288,10 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     NSString* s = [(english ?: @"") lowercaseString];
     NJParsedRule* r = [NJParsedRule new];
 
-    NSString* who = @"A person";
-    if (contains_any(s, @[@"car", @"vehicle", @"truck", @"van"])) who = @"A vehicle";
-    else if (contains_any(s, @[@"animal", @"dog", @"cat", @"fox", @"raccoon", @"coyote"])) who = @"An animal";
-    else if (contains_any(s, @[@"package", @"parcel", @"delivery", @"box", @"mail"])) who = @"A package";
+    NSString* who = @"A person"; NSString* subjectKey = @"person";
+    if (contains_any(s, @[@"car", @"vehicle", @"truck", @"van"])) { who = @"A vehicle"; subjectKey = @"vehicle"; }
+    else if (contains_any(s, @[@"animal", @"dog", @"cat", @"fox", @"raccoon", @"coyote"])) { who = @"An animal"; subjectKey = @"animal"; }
+    else if (contains_any(s, @[@"package", @"parcel", @"delivery", @"box", @"mail"])) { who = @"A package"; subjectKey = @"package"; }
 
     NSString* trig = contains_any(s, @[@"loiter", @"linger", @"hang around", @"hangs around", @"stays",
                                        @"waiting", @"waits", @"lurk", @"stand around"]) ? @"loiter" : @"appears";
@@ -309,6 +316,7 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
                                              [[s substringWithRange:[m rangeAtIndex:2]] uppercaseString]];
 
     r.who = who;
+    r.subjectKey = subjectKey;
     r.where = where;
     r.when = when;
     r.then = @"Ping your phone + photo";

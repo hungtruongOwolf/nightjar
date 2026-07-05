@@ -8,6 +8,7 @@ struct RuleItem: Identifiable {
     var sub: String
     var icon: String
     var trigger: String?
+    var subject: String = "person"
     var on: Bool
 }
 
@@ -16,8 +17,9 @@ struct ContentView: View {
     @State private var ruleText: String
     @State private var parsed: NJParsedRule?
     @State private var zonePolygon: [CGPoint] = []
+    @StateObject private var driver = EngineDriver()
     @State private var rules: [RuleItem] = [
-        .init(title: "Person appears in the backyard", sub: "10 PM – 6 AM · Notify + photo", icon: "figure.walk", trigger: "appears", on: true),
+        .init(title: "Person appears in the backyard", sub: "10 PM – 6 AM · Notify + photo", icon: "figure.walk", trigger: "appears", subject: "person", on: true),
     ]
 
     init() {
@@ -36,9 +38,9 @@ struct ContentView: View {
         }
     }
 
-    private var activeTrigger: String {
-        rules.first(where: { $0.on && $0.trigger != nil })?.trigger ?? "appears"
-    }
+    private var activeRule: RuleItem? { rules.first(where: { $0.on && $0.trigger != nil }) }
+    private var activeTrigger: String { activeRule?.trigger ?? "appears" }
+    private var activeSubject: String { activeRule?.subject ?? "person" }
 
     var body: some View {
         ZStack {
@@ -61,19 +63,30 @@ struct ContentView: View {
                 RulesView(rules: $rules, onStart: { go(.guarding) }, onAdd: { ruleText = ""; go(.chat) })
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .guarding:
-                GuardView(trigger: activeTrigger, armedCount: rules.filter { $0.on }.count, zone: zonePolygon, onExit: { go(.rules) })
+                GuardView(driver: driver, trigger: activeTrigger, subject: activeSubject,
+                          armedCount: rules.filter { $0.on }.count, zone: zonePolygon, onExit: { go(.rules) })
                     .transition(.opacity)
             }
         }
+        .buttonStyle(.plain)
         .preferredColorScheme(.dark)
     }
 
     private func go(_ s: Screen) { withAnimation(.easeOut(duration: 0.38)) { screen = s } }
 
+    private func iconFor(_ subject: String, trigger: String?) -> String {
+        switch subject {
+        case "vehicle": return "car.fill"
+        case "animal": return "pawprint.fill"
+        case "package": return "shippingbox.fill"
+        default: return trigger == "loiter" ? "clock.badge.exclamationmark" : "figure.walk"
+        }
+    }
+
     private func addRuleAndGuard() {
         let p = parsed ?? NightjarEngine.compileRule(ruleText)
-        let icon = p.trigger == "loiter" ? "clock.badge.exclamationmark" : "figure.walk"
-        rules.insert(.init(title: p.title, sub: "\(p.when) · \(p.then)", icon: icon, trigger: p.trigger, on: true), at: 0)
+        let icon = iconFor(p.subjectKey, trigger: p.trigger)
+        rules.insert(.init(title: p.title, sub: "\(p.when) · \(p.then)", icon: icon, trigger: p.trigger, subject: p.subjectKey, on: true), at: 0)
         // keep only this newly-armed rule active for a clean demo
         for i in rules.indices where i != 0 { rules[i].on = false }
         go(.rules)

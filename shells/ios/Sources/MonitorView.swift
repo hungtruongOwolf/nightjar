@@ -36,23 +36,61 @@ struct MonitorView: View {
                         Metric(value: "\(s.conflationDrops)", label: "conflation drops", hint: "bursts dropped-old, counted")
                     }
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Row(k: "Source", v: driver.usingCamera ? "real camera" : "synthetic (Simulator)")
-                        Row(k: "Frames processed", v: "\(s.framesProcessed)")
-                        Row(k: "Thermal", v: "nominal · running cool")
-                        Row(k: "Data leaving device", v: "none")
+                    // Hardware / power — the efficiency story, live.
+                    VStack(alignment: .leading, spacing: 12) {
+                        MonoLabel(text: "HARDWARE & POWER", size: 9.5, opacity: 0.5)
+                        HStack(spacing: 12) {
+                            Bar(label: "VLM compute avoided", pct: Int(s.framesSkippedPct), tint: NW.green)
+                        }
+                        Row(k: "Thermal state", v: thermal().0, vColor: thermal().1)
+                        Row(k: "Expensive path (VLM)", v: "\(s.vlmChecks) of \(s.framesProcessed) frames")
+                        Row(k: "Perf-per-watt lever", v: "gate skips \(s.framesSkippedPct)% before the VLM")
+                        Row(k: "Data leaving device", v: "none", vColor: NW.green)
                     }.padding(16).background(NW.card).cornerRadius(16)
 
-                    Text("These are live counters from the engine's Telemetry. The same instrument runs headless in the replay harness (make demo → report.md) with warm p50/p90/p99 per stage — that harness, not this app, is the source of the published benchmark numbers.")
-                        .font(.system(size: 12)).lineSpacing(3).foregroundColor(NW.muted(0.45))
+                    Text("Efficiency isn't a number to hit — it's the design: the cheap NEON gate discards most frames so the expensive VLM (P-cores) runs on a few %. That's the perf-per-watt lever this monitor shows live.")
+                        .font(.system(size: 12)).lineSpacing(3).foregroundColor(NW.muted(0.5))
+
+                    if !driver.usingCamera || true {
+                        Text("Note — this build's Tier-2 is the scripted stand-in and recognizes person/motion only; other subjects need the on-device VLM (they won't false-fire). Benchmark numbers of record come from the offline replay harness (make demo → report.md), not this app.")
+                            .font(.system(size: 11)).lineSpacing(3).foregroundColor(NW.muted(0.38))
+                    }
                     Spacer()
                 }.padding(.horizontal, 20)
             }
         }
+        .buttonStyle(.plain)
         .preferredColorScheme(.dark)
     }
 
     private func fmt(_ v: Double, _ unit: String) -> String { v > 0 ? String(format: "%.2f %@", v, unit) : "—" }
+
+    private func thermal() -> (String, Color) {
+        switch ProcessInfo.processInfo.thermalState {
+        case .nominal: return ("nominal · running cool", NW.green)
+        case .fair: return ("fair · a bit warm", Color(hex: 0xFACC15))
+        case .serious: return ("serious · pacing itself", Color(hex: 0xFB923C))
+        case .critical: return ("critical · motion-only", NW.rose)
+        @unknown default: return ("—", NW.cream)
+        }
+    }
+}
+
+// A labelled progress bar (0–100).
+private struct Bar: View {
+    let label: String; let pct: Int; let tint: Color
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack { Text(label).font(.system(size: 12)).foregroundColor(NW.muted(0.6)); Spacer()
+                Text("\(pct)%").font(NW.mono(12)).foregroundColor(tint) }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(NW.muted(0.1)).frame(height: 7)
+                    Capsule().fill(tint).frame(width: g.size.width * CGFloat(min(max(pct, 0), 100)) / 100, height: 7)
+                }
+            }.frame(height: 7)
+        }.frame(maxWidth: .infinity)
+    }
 }
 
 private struct Metric: View {
@@ -67,8 +105,8 @@ private struct Metric: View {
 }
 
 private struct Row: View {
-    let k: String; let v: String
+    let k: String; let v: String; var vColor: Color = NW.cream
     var body: some View {
-        HStack { Text(k).font(.system(size: 13)).foregroundColor(NW.muted(0.55)); Spacer(); Text(v).font(NW.mono(12)).foregroundColor(NW.cream) }
+        HStack { Text(k).font(.system(size: 13)).foregroundColor(NW.muted(0.55)); Spacer(); Text(v).font(NW.mono(12)).foregroundColor(vColor) }
     }
 }

@@ -29,8 +29,9 @@ typedef struct {
 @property(nonatomic, copy) NSString *where;    // Backyard / Front door / ...
 @property(nonatomic, copy) NSString *when;     // 10 PM – 6 AM / Anytime
 @property(nonatomic, copy) NSString *then;     // Ping your phone + photo
-@property(nonatomic, copy) NSString *trigger;  // "appears" | "loiter"
-@property(nonatomic, copy) NSString *title;    // one-line rule card title
+@property(nonatomic, copy) NSString *trigger;     // "appears" | "loiter"
+@property(nonatomic, copy) NSString *subjectKey;  // "person" | "vehicle" | "animal" | "package"
+@property(nonatomic, copy) NSString *title;       // one-line rule card title
 @end
 
 @interface NightjarEngine : NSObject
@@ -45,6 +46,11 @@ typedef struct {
 // before starting. Empty = whole frame. The engine rasterizes it to the gate's
 // block grid so motion outside the zone never wakes the VLM.
 - (void)setZonePolygon:(NSArray<NSValue *> *)normalizedPoints;
+
+// Which subject the rule watches ("person"/"vehicle"/"animal"/"package").
+// Set before starting. The scripted Tier-2 in this build only recognizes
+// "person"; other subjects need the on-device VLM (they won't false-fire).
+- (void)setSubject:(NSString *)subjectKey;
 
 // Real camera: the shell owns AVCaptureSession and pushes each frame here.
 - (void)startCameraWithTrigger:(NSString *)trigger

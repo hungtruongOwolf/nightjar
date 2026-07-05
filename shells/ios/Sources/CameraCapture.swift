@@ -14,6 +14,7 @@ final class CameraCapture: NSObject, ObservableObject, AVCaptureVideoDataOutputS
     @Published var running = false
     private let engine: NightjarEngine
     private let queue = DispatchQueue(label: "nightjar.camera")
+    private var configured = false  // configure the session once; re-entry just re-runs it
 
     init(engine: NightjarEngine) { self.engine = engine; super.init() }
 
@@ -22,7 +23,14 @@ final class CameraCapture: NSObject, ObservableObject, AVCaptureVideoDataOutputS
     func start() {
         AVCaptureDevice.requestAccess(for: .video) { [weak self] ok in
             guard ok, let self else { return }
-            self.queue.async { self.configure() }
+            self.queue.async {
+                if self.configured {
+                    if !self.session.isRunning { self.session.startRunning() }
+                    DispatchQueue.main.async { self.running = true }
+                } else {
+                    self.configure()
+                }
+            }
         }
     }
 
@@ -39,11 +47,12 @@ final class CameraCapture: NSObject, ObservableObject, AVCaptureVideoDataOutputS
         out.setSampleBufferDelegate(self, queue: queue)
         if session.canAddOutput(out) { session.addOutput(out) }
         session.commitConfiguration()
+        configured = true
         session.startRunning()
         DispatchQueue.main.async { self.running = true }
     }
 
-    func stop() { queue.async { self.session.stopRunning() } }
+    func stop() { queue.async { if self.session.isRunning { self.session.stopRunning() } } }
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }

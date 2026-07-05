@@ -14,10 +14,10 @@ final class EngineDriver: ObservableObject {
     private lazy var camera = CameraCapture(engine: engine)
     var session: AVCaptureSession { camera.session }
 
-    func start(trigger: String, zone: [CGPoint]) {
-        if !zone.isEmpty {
-            engine.setZonePolygon(zone.map(njPoint))
-        }
+    func start(trigger: String, subject: String, zone: [CGPoint]) {
+        alertText = nil
+        engine.setSubject(subject)
+        engine.setZonePolygon(zone.isEmpty ? [] : zone.map(njPoint))
         if CameraCapture.hasCamera {
             usingCamera = true
             engine.startCamera(withTrigger: trigger,
@@ -44,26 +44,28 @@ func njPoint(_ p: CGPoint) -> NSValue {
 }
 
 struct GuardView: View {
+    @ObservedObject var driver: EngineDriver
     let trigger: String
+    var subject: String = "person"
     let armedCount: Int
     var zone: [CGPoint] = []
     let onExit: () -> Void
 
-    @StateObject private var driver = EngineDriver()
     @State private var since = Date()
     @State private var showAlert = false
     @State private var showMonitor = false
+    @State private var dimmed = false
 
     var body: some View {
         ZStack {
             NW.guardBg.ignoresSafeArea()
             VStack(spacing: 0) {
-                preview
+                if dimmed { dimScreen } else { preview }
                 controlBar
             }
             if showAlert { alertOverlay }
         }
-        .onAppear { driver.start(trigger: trigger, zone: zone); since = Date() }
+        .onAppear { driver.start(trigger: trigger, subject: subject, zone: zone); since = Date() }
         .onDisappear { driver.stop() }
         .onChange(of: driver.alertText) { new in
             guard new != nil else { return }
@@ -114,21 +116,36 @@ struct GuardView: View {
     // Guard stays focused on the core: watching + the alert. Numbers live in the
     // separate Monitor.
     private var controlBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 9) {
             HStack(spacing: 8) {
-                BreatheDot(color: NW.green)
-                Text("Guarding · \(armedCount) armed").font(.system(size: 13, weight: .semibold)).foregroundColor(NW.muted(0.85))
+                BreatheDot(color: dimmed ? NW.muted(0.4) : NW.green)
+                Text(dimmed ? "Dimmed · still watching" : "Guarding · \(armedCount) armed")
+                    .font(.system(size: 12.5, weight: .semibold)).foregroundColor(NW.muted(0.85)).lineLimit(1)
             }
-            Spacer()
-            Button { showMonitor = true } label: { pill("Monitor", filled: false) }
-            Button(action: onExit) { pill("Rules", filled: false) }
-        }.padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 34)
+            Spacer(minLength: 6)
+            Button { withAnimation { dimmed.toggle() } } label: { pill(dimmed ? "Wake" : "Dim") }
+            Button { showMonitor = true } label: { pill("Monitor") }
+            Button(action: onExit) { pill("Rules") }
+        }.padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 30)
     }
 
-    private func pill(_ t: String, filled: Bool) -> some View {
+    private func pill(_ t: String) -> some View {
         Text(t).font(.system(size: 12.5, weight: .semibold)).foregroundColor(NW.muted(0.7))
-            .padding(.horizontal, 15).padding(.vertical, 9)
+            .padding(.horizontal, 13).padding(.vertical, 9)
             .overlay(Capsule().stroke(NW.muted(0.28), style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
+    }
+
+    // Power-save: hide the preview (engine keeps running), show Otto + clock.
+    private var dimScreen: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            Bob { OttoOwl(size: 110, alert: showAlert) }
+            ClockBig().padding(.top, 18)
+            Text("Otto's on watch — screen dimmed to save power.")
+                .font(NW.serif(16, italic: true)).foregroundColor(NW.muted(0.6)).padding(.top, 12).multilineTextAlignment(.center)
+            Text("\(armedCount) armed · all quiet").font(.system(size: 12.5)).foregroundColor(NW.muted(0.4)).padding(.top, 5)
+            Spacer()
+        }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var alertOverlay: some View {
