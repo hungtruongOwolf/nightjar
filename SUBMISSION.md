@@ -58,17 +58,13 @@ section does not match the Track Details page; the Track Details page governs.)
       form. Optional but strongly weighted for judges.
 - [ ] *(optional, great money-shot for the video)* install the **ntfy** app,
       subscribe to a topic, enter it on the rules screen → alerts push live.
-- [ ] *(optional, not required, but a nice bonus)* complete one Arm **KleidiAI**
-      learning path and screenshot the completion/badge. Best fit, because it's
-      exactly our stack: a **KleidiAI + llama.cpp** path (e.g. "Run an LLM chatbot
-      with llama.cpp using KleidiAI on Arm servers", or the Track-3 "Measure LLM
-      inference performance with KleidiAI" one). You already have the toolchain,
-      so it's quick. Save the screenshot in `docs/arm-learning/`; then tell me and
-      I'll cite it in the write-up.
-
-Note: Track 3 (Mobile AI) itself requires only the repo + write-up + optional
-video. The learning path above is purely a bonus, and the project already uses
-KleidiAI for real (`bench/kleidiai_results.md`).
+Not needed: an Arm learning path. The rules score only Technological
+Implementation, UX/DX, Potential Impact, and WOW; there is no points category for
+completing a learning path, and Track 3 (Mobile AI) requires only the repo +
+write-up + optional video. The project already uses KleidiAI for real
+(`bench/kleidiai_results.md`), which counts toward Technological Implementation
+far more than a tutorial screenshot would. Do a learning path only if you want to,
+not for points.
 
 ## Honest caveats (kept visible, per our own rules)
 
