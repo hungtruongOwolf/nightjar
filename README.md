@@ -15,6 +15,11 @@ Built for the **Arm Create: AI Optimization Challenge 2026, Track 3 (Mobile AI, 
 </p>
 <p align="center"><sub>Left, the setup flow: describe a rule in English, confirm it, mark a zone, guard. Right, the live guard on a Mac webcam / iOS: the gate tracks motion and the alert fires.</sub></p>
 
+<p align="center">
+  <a href="https://youtu.be/SwZJ1pdq918"><img src="https://img.youtube.com/vi/SwZJ1pdq918/hqdefault.jpg" width="480" alt="Watch the Nightjar demo on YouTube"/></a>
+</p>
+<p align="center"><b><a href="https://youtu.be/SwZJ1pdq918">Watch the 2-minute demo on YouTube</a></b></p>
+
 ## Try it (judges start here)
 
 Five minutes, no iPhone and no model needed. Only a C++17 compiler and CMake.
