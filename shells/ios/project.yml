@@ -1,0 +1,42 @@
+# xcodegen spec for the Nightjar iOS shell.
+# Regenerate + build for the Simulator with:
+#   xcodegen -s project.yml
+#   xcodebuild -project Nightjar.xcodeproj -scheme Nightjar \
+#     -sdk iphonesimulator -configuration Debug build
+#
+# The shell is thin: it compiles the portable C++ engine core (../../engine)
+# straight into the app and reaches it through NightjarBridge (Obj-C++). No
+# model and no camera are needed — Tier-2 is the scripted VLM and the input is
+# a synthetic replayed clip, so it runs on the Simulator.
+name: Nightjar
+options:
+  bundleIdPrefix: dev.hungtruong
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CLANG_CXX_LANGUAGE_STANDARD: "c++17"
+    CLANG_CXX_LIBRARY: "libc++"
+targets:
+  Nightjar:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: ../../engine/src
+        # engine core .cpp (no VLM/net deps); headers come via search path
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
+        CFBundleDisplayName: Nightjar
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.hungtruong.nightjar
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/Nightjar-Bridging-Header.h
+        HEADER_SEARCH_PATHS:
+          - $(SRCROOT)/../../engine/include
+          - $(SRCROOT)/Sources
+        # Simulator builds don't need signing.
+        CODE_SIGNING_ALLOWED: "NO"
