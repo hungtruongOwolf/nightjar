@@ -1,6 +1,7 @@
 #include "nightjar/pipeline.h"
 
 #include <chrono>
+#include <filesystem>
 #include <thread>
 #include <vector>
 
@@ -141,11 +142,55 @@ void test_loitering_needs_dwell() {
     CHECK_EQ(sink.count(), size_t(0));  // dwell never reached -> no loitering alert
 }
 
+void test_event_captures_clip_and_detail() {
+    namespace fs = std::filesystem;
+    fs::path clipdir = fs::temp_directory_path() / "nj_pipe_clips";
+    fs::remove_all(clipdir);
+
+    TemporalRuleEngine rules;
+    rules.set_rules({person_appears()});
+    ScriptedPredicateVlm vlm({{"person", true}}, 10);
+    CapturingSink sink;
+    Telemetry tel;
+    ClipConfig ccfg;
+    ccfg.dir = clipdir.string();
+    ccfg.pre_roll_frames = 3;
+    ccfg.post_roll_frames = 4;
+    EventClipStore clips(ccfg);
+
+    Pipeline pipe(test_config(), &rules, &vlm, &sink, &tel, &clips);
+    pipe.set_clock([] { return Clock{23 * 60, 1000}; });
+    pipe.start();
+
+    auto bg = flat(40);
+    auto blob = blob_frame();
+    pipe.on_frame(view_of(bg, 0));
+    pipe.on_frame(view_of(bg, 1));
+    pipe.on_frame(view_of(blob, 2));  // event
+    for (uint64_t i = 3; i < 10; ++i) pipe.on_frame(view_of(blob, i));  // post-roll frames
+    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    pipe.stop();
+    clips.flush();
+
+    CHECK(sink.count() >= 1);
+    if (sink.count() >= 1)
+        CHECK(sink.alerts()[0].one_liner.find("appeared") != std::string::npos);  // fact detail
+    CHECK(clips.stored_clips() >= 1);  // an evidence clip was captured
+    // The clip directory has frames (a span, not one image).
+    bool has_frames = false;
+    std::error_code ec;
+    for (auto& e : fs::recursive_directory_iterator(clipdir, ec))
+        if (e.path().extension() == ".pgm") has_frames = true;
+    CHECK(has_frames);
+    fs::remove_all(clipdir);
+}
+
 }  // namespace
 
 int main() {
     test_end_to_end_person_alert();
     test_no_person_no_alert();
     test_loitering_needs_dwell();
+    test_event_captures_clip_and_detail();
     return njtest::failures() == 0 ? 0 : 1;
 }

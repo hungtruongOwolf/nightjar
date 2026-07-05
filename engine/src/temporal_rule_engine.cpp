@@ -69,8 +69,22 @@ std::vector<AlertDecision> TemporalRuleEngine::observe(const Observation& obs) {
         s.prev_present = present;
 
         if (fired && passes_gates(rule, obs, s)) {
-            AlertDecision d{rule.id, subject_of(rule.predicate), rule.actions, obs.unix_s, {}};
+            AlertDecision d{rule.id, subject_of(rule.predicate), rule.actions, obs.unix_s, {}, {}};
             d.label = rule.raw_text;  // the user's English rule = the alert phrase
+            // Temporal fact for the evidence timeline.
+            switch (rule.trigger) {
+                case Trigger::Appears:
+                    d.detail = "appeared";
+                    break;
+                case Trigger::Sustained: {
+                    const long secs = s.true_since_s >= 0 ? long(obs.unix_s - s.true_since_s) : 0;
+                    d.detail = "present " + std::to_string(secs) + "s";
+                    break;
+                }
+                case Trigger::LeftBehind:
+                    d.detail = "object left behind, person gone";
+                    break;
+            }
             decisions.push_back(std::move(d));
         }
     }

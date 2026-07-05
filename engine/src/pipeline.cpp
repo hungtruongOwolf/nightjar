@@ -33,27 +33,47 @@ const char* subject_word(Subject s) {
 }
 
 std::string one_liner(const AlertDecision& d, const std::string& zone, int minute_of_day) {
-    char buf[192];
-    // Prefer the rule's own English phrase; fall back to a generic line.
+    char buf[256];
+    const char* detail = d.detail.empty() ? "" : d.detail.c_str();
+    // Prefer the rule's own English phrase; fall back to a generic line. Append
+    // the temporal fact (evidence) when present.
     if (!d.label.empty()) {
-        std::snprintf(buf, sizeof(buf), "%s (%s, %02d:%02d)", d.label.c_str(), zone.c_str(),
-                      minute_of_day / 60, minute_of_day % 60);
+        std::snprintf(buf, sizeof(buf), "%s [%s] (%s, %02d:%02d)", d.label.c_str(), detail,
+                      zone.c_str(), minute_of_day / 60, minute_of_day % 60);
     } else {
-        std::snprintf(buf, sizeof(buf), "%s in %s at %02d:%02d", subject_word(d.subject),
+        std::snprintf(buf, sizeof(buf), "%s %s in %s at %02d:%02d", subject_word(d.subject), detail,
                       zone.c_str(), minute_of_day / 60, minute_of_day % 60);
     }
     return buf;
 }
 
+// Downscale a (possibly strided) Y-plane into a small GrayImage for the clip
+// ring — nearest-neighbour by an integer factor, cheap enough for the capture
+// thread (no disk here; the clip store's writer does I/O).
+GrayImage downscaled_gray(const FrameView& f, int factor) {
+    if (factor < 1) factor = 1;
+    GrayImage g;
+    g.width = f.width / factor;
+    g.height = f.height / factor;
+    g.pixels.resize(static_cast<size_t>(g.width) * g.height);
+    for (int y = 0; y < g.height; ++y) {
+        const uint8_t* row = f.y_plane + static_cast<size_t>(y * factor) * f.stride;
+        uint8_t* dst = g.pixels.data() + static_cast<size_t>(y) * g.width;
+        for (int x = 0; x < g.width; ++x) dst[x] = row[x * factor];
+    }
+    return g;
+}
+
 }  // namespace
 
 Pipeline::Pipeline(PipelineConfig config, TemporalRuleEngine* rules, IPredicateVlm* vlm,
-                   IAlertSink* sink, Telemetry* telemetry)
+                   IAlertSink* sink, Telemetry* telemetry, EventClipStore* clips)
     : config_(std::move(config)),
       rules_(rules),
       vlm_(vlm),
       sink_(sink),
       tel_(telemetry),
+      clips_(clips),
       clock_fn_(real_clock),
       gate_(config_.gate),
       selector_(config_.best_frame) {}
@@ -78,6 +98,10 @@ void Pipeline::on_frame(const FrameView& frame) {
     const uint64_t seq = frame.seq;
     tel_->stamp(Stage::Capture, seq, frame.ts_mono_ns);
     tel_->counter(Counter::FramesCaptured);
+
+    // Feed the rolling clip pre-roll (downscaled, cheap; the store's writer
+    // thread does the disk I/O so the fast path stays clean).
+    if (clips_) clips_->on_frame(downscaled_gray(frame, 2));
 
     const GateResult gate = gate_.evaluate(frame);
     tel_->stamp(Stage::GateVerdict, seq, now_ns());
@@ -134,6 +158,10 @@ void Pipeline::process_candidate(const CandidateFrame& candidate) {
 
     const auto decisions = rules_->observe(obs);
     tel_->stamp(Stage::RuleMatch, ev, now_ns());
+
+    // On the first firing decision, start capturing an evidence clip (pre-roll
+    // already in the ring; post-roll recorded as subsequent frames arrive).
+    if (clips_ && !decisions.empty()) clips_->begin_event(std::to_string(ev));
 
     for (const AlertDecision& d : decisions) {
         Alert alert;

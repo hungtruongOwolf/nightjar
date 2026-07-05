@@ -10,6 +10,7 @@
 #include "nightjar/alert_sink.h"
 #include "nightjar/best_frame_selector.h"
 #include "nightjar/conflating_slot.h"
+#include "nightjar/event_clip_store.h"
 #include "nightjar/frame_view.h"
 #include "nightjar/motion_gate.h"
 #include "nightjar/predicate.h"
@@ -37,8 +38,10 @@ struct PipelineConfig {
 // same pipeline runs the reproducible demo and the on-device app.
 class Pipeline {
 public:
+    // clips is optional (nullptr = no clip capture). When set, the pipeline
+    // feeds it downscaled frames and starts an event clip when an alert fires.
     Pipeline(PipelineConfig config, TemporalRuleEngine* rules, IPredicateVlm* vlm, IAlertSink* sink,
-             Telemetry* telemetry);
+             Telemetry* telemetry, EventClipStore* clips = nullptr);
     ~Pipeline();
 
     void set_clock(std::function<Clock()> clock_fn);
@@ -57,6 +60,7 @@ private:
     IPredicateVlm* vlm_;
     IAlertSink* sink_;
     Telemetry* tel_;
+    EventClipStore* clips_;
     std::function<Clock()> clock_fn_;
 
     MotionGate gate_;

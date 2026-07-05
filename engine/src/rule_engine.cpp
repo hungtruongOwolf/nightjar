@@ -22,7 +22,7 @@ std::vector<AlertDecision> RuleEngine::match(const Facts& facts, const std::stri
         }
         last_fired_unix_s_[rule.id] = now.unix_s;
 
-        decisions.push_back(AlertDecision{rule.id, rule.subject, rule.actions, now.unix_s, {}});
+        decisions.push_back(AlertDecision{rule.id, rule.subject, rule.actions, now.unix_s, {}, {}});
     }
     return decisions;
 }
