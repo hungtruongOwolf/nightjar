@@ -5,6 +5,7 @@
 #include <string>
 
 #include "nightjar/rule.h"
+#include "nightjar/temporal_rule.h"
 
 namespace nightjar {
 
@@ -30,6 +31,14 @@ public:
     // Parse a compiler-JSON string into a Rule (exposed for testing / offline use).
     static std::optional<Rule> parse(const std::string& json, const std::string& id,
                                      const std::string& raw_text);
+
+    // Temporal variant: compile English into a TemporalRule (appears / loiter /
+    // left_behind + dwell), the conditions a detector can't express.
+    std::optional<TemporalRule> compile_temporal(const std::string& english,
+                                                 const std::string& id) const;
+    static std::optional<TemporalRule> parse_temporal(const std::string& json,
+                                                      const std::string& id,
+                                                      const std::string& raw_text);
 
 private:
     std::string prompt_template_;  // contains the {RULE_TEXT} placeholder

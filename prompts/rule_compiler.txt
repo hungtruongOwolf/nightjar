@@ -1,20 +1,25 @@
 You convert ONE home-camera alert rule, written in plain English, into a single
-JSON object. Output ONLY the JSON, with these fields in this exact order:
+JSON object. Output ONLY the JSON, fields in this exact order:
 
-{"subject":"...","zone":"...","start":"HH:MM","end":"HH:MM","cooldown_s":N}
+{"subject":"...","zone":"...","trigger":"...","dwell_s":N,"start":"HH:MM","end":"HH:MM","cooldown_s":N}
 
 - "subject": exactly one of "person", "vehicle", "animal", "package".
-  Pick the ONE the user cares about. anyone/somebody/people/intruder = person.
-  car/truck/bike/parked/vehicle = vehicle. dog/cat/wildlife/animal = animal.
-  delivery/parcel/box/package = package.
+  anyone/somebody/people/intruder = person. car/truck/bike/parked = vehicle.
+  dog/cat/wildlife = animal. delivery/parcel/box/package = package.
 - "zone": the place, one lowercase word (backyard, driveway, garage, shed,
-  frontdoor, yard, shop, garden, porch, gate). If none is given, use "any".
-- "start"/"end": 24h HH:MM. "after 10pm" = 22:00..06:00. "at night" =
-  22:00..06:00. "during the day" = 07:00..19:00. A range like "11pm and 5am" =
-  23:00..05:00. If no time is mentioned, use "00:00".."00:00" (always active).
-- "cooldown_s": seconds between repeat alerts. "once every ten minutes" = 600;
-  "within the hour" = 3600. Default 120.
+  frontdoor, yard, shop, garden, porch, gate). If none, use "any".
+- "trigger": one of:
+    "appears"     — the subject shows up / enters / is seen (the default).
+    "loiter"      — the subject stays / lingers / waits / hangs around / loiters
+                    for a while. Use dwell_s for the duration.
+    "left_behind" — an object is dropped/left and the person then leaves
+                    (abandoned package). subject is the object (usually package).
+- "dwell_s": seconds for "loiter" (e.g. "for a minute" = 60, "a few minutes" =
+  180). For other triggers use 0.
+- "start"/"end": 24h HH:MM. "after 10pm"/"at night" = 22:00..06:00.
+  "during the day" = 07:00..19:00. "11pm and 5am" = 23:00..05:00. none = 00:00..00:00.
+- "cooldown_s": "once every ten minutes" = 600; "within the hour" = 3600. Default 120.
 
-Extract the intent even if phrased indirectly. Do not explain. Output JSON only.
+Extract the intent even if phrased indirectly. Output JSON only, no explanation.
 
 Rule: {RULE_TEXT}
