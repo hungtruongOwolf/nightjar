@@ -9,55 +9,114 @@ namespace fs = std::filesystem;
 EventClipStore::EventClipStore(ClipConfig config) : config_(std::move(config)) {
     std::error_code ec;
     fs::create_directories(config_.dir, ec);
+    worker_ = std::thread([this] { worker_loop(); });
 }
 
-void EventClipStore::write_frame_to_current(const GrayImage& f) {
-    char name[64];
-    std::snprintf(name, sizeof(name), "frame_%04d.pgm", current_idx_++);
-    write_pgm((fs::path(current_dir_) / name).string(), f);
+EventClipStore::~EventClipStore() {
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        stop_ = true;
+    }
+    cv_.notify_all();
+    if (worker_.joinable()) worker_.join();
 }
 
 void EventClipStore::on_frame(const GrayImage& frame) {
-    if (config_.sample_every > 1 && (frame_counter_++ % config_.sample_every) != 0 &&
-        !recording()) {
-        return;  // downsample the pre-roll ring; always keep frames while recording
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        // Best-effort: if the writer is behind, drop the oldest queued FRAME so
+        // the capture thread never blocks (the ring tolerates gaps).
+        if (static_cast<int>(queue_.size()) >= config_.queue_max) {
+            for (auto it = queue_.begin(); it != queue_.end(); ++it) {
+                if (it->type == Cmd::Frame) {
+                    queue_.erase(it);
+                    dropped_frames_.fetch_add(1);
+                    break;
+                }
+            }
+        }
+        Cmd c;
+        c.type = Cmd::Frame;
+        c.frame = frame;  // copy (RAM, cheap); disk I/O happens on the worker
+        queue_.push_back(std::move(c));
     }
-
-    // Maintain the pre-roll ring.
-    preroll_.push_back(frame);
-    while (static_cast<int>(preroll_.size()) > config_.pre_roll_frames) preroll_.pop_front();
-
-    // If recording, append to the current clip.
-    if (recording()) {
-        write_frame_to_current(frame);
-        --remaining_post_;
-    }
+    cv_.notify_one();
 }
 
 std::string EventClipStore::begin_event(const std::string& event_id) {
-    current_dir_ = (fs::path(config_.dir) / ("event_" + event_id)).string();
+    const std::string dir = (fs::path(config_.dir) / ("event_" + event_id)).string();
     std::error_code ec;
-    fs::create_directories(current_dir_, ec);
+    fs::create_directories(dir, ec);
     if (ec) return "";
-    current_idx_ = 0;
-
-    // Dump the pre-roll (context BEFORE the event — evidence is a span, not a frame).
-    for (const GrayImage& f : preroll_) write_frame_to_current(f);
-    remaining_post_ = config_.post_roll_frames;
-
-    clip_dirs_.push_back(current_dir_);
-    evict_to_cap();
-    return current_dir_;
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        Cmd c;
+        c.type = Cmd::Begin;
+        c.dir = dir;
+        queue_.push_back(std::move(c));  // never dropped
+    }
+    cv_.notify_one();
+    return dir;
 }
 
-void EventClipStore::evict_to_cap() {
-    while (static_cast<int>(clip_dirs_.size()) > config_.max_clips) {
-        std::error_code ec;
-        fs::remove_all(clip_dirs_.front(), ec);  // delete oldest clip
-        clip_dirs_.pop_front();
+void EventClipStore::flush() {
+    std::unique_lock<std::mutex> lock(mu_);
+    drained_cv_.wait(lock, [this] { return queue_.empty() && !processing_; });
+}
+
+void EventClipStore::worker_loop() {
+    // All clip state is owned here — no cross-thread sharing beyond the queue.
+    std::deque<GrayImage> preroll;
+    std::deque<std::string> clip_dirs;
+    std::string cur_dir;
+    int cur_idx = 0;
+    int remaining_post = 0;
+
+    auto write_frame = [&](const GrayImage& f) {
+        char name[64];
+        std::snprintf(name, sizeof(name), "frame_%04d.pgm", cur_idx++);
+        write_pgm((fs::path(cur_dir) / name).string(), f);
+    };
+
+    for (;;) {
+        Cmd cmd;
+        {
+            std::unique_lock<std::mutex> lock(mu_);
+            cv_.wait(lock, [this] { return !queue_.empty() || stop_; });
+            if (stop_ && queue_.empty()) break;
+            cmd = std::move(queue_.front());
+            queue_.pop_front();
+            processing_ = true;  // not "drained" until the write below finishes
+        }
+
+        if (cmd.type == Cmd::Frame) {
+            preroll.push_back(cmd.frame);
+            while (static_cast<int>(preroll.size()) > config_.pre_roll_frames) preroll.pop_front();
+            if (remaining_post > 0) {
+                write_frame(cmd.frame);
+                --remaining_post;
+            }
+        } else {  // Begin
+            cur_dir = cmd.dir;
+            cur_idx = 0;
+            for (const GrayImage& f : preroll) write_frame(f);  // dump the pre-roll context
+            remaining_post = config_.post_roll_frames;
+
+            clip_dirs.push_back(cur_dir);
+            while (static_cast<int>(clip_dirs.size()) > config_.max_clips) {
+                std::error_code ec;
+                fs::remove_all(clip_dirs.front(), ec);  // evict oldest
+                clip_dirs.pop_front();
+            }
+            stored_.store(clip_dirs.size());
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(mu_);
+            processing_ = false;
+            if (queue_.empty()) drained_cv_.notify_all();
+        }
     }
 }
-
-size_t EventClipStore::stored_clips() const { return clip_dirs_.size(); }
 
 }  // namespace nightjar

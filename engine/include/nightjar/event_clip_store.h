@@ -1,8 +1,12 @@
 #pragma once
 
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <mutex>
 #include <string>
+#include <thread>
 
 #include "nightjar/pgm.h"
 
@@ -13,42 +17,54 @@ struct ClipConfig {
     int max_clips = 50;          // HARD CAP — oldest clips evicted beyond this (bounded storage)
     int pre_roll_frames = 30;    // frames of context kept before the event (~1s @ 30fps)
     int post_roll_frames = 60;   // frames recorded after the event fires (~2s)
-    int sample_every = 1;        // keep 1 in N frames (downsample the clip to save space)
+    int queue_max = 240;         // command-queue cap; oldest frame commands dropped if exceeded
 };
 
 // Bounded, rotating on-device clip storage — the answer to "camera memory is
-// never enough". We never keep continuous video or a growing database: a small
-// pre-roll ring lives in RAM, and when an event fires a short clip (pre-roll +
-// post-roll) is written to disk. The store keeps at most `max_clips`; the oldest
-// is evicted when a new one would exceed the cap. All on-device; a clip is
-// evidence (a span of frames, not a single image) and the user can delete it.
+// never enough". Never keeps continuous video or a growing database: a small
+// pre-roll ring, and on an event a short clip (pre-roll + post-roll) written to
+// disk, at most `max_clips` (oldest evicted).
+//
+// All clip state and disk I/O live on a single owner (a writer thread); the
+// capture and VLM threads only enqueue commands. This keeps the capture fast
+// path free of disk I/O (consistent with the pipeline's microsecond tick
+// handler) — frame commands are best-effort (dropped if the queue is full),
+// begin-event commands are never dropped.
 class EventClipStore {
 public:
     explicit EventClipStore(ClipConfig config);
+    ~EventClipStore();
 
-    // Feed every (downscaled) frame. Maintains the pre-roll ring, and if a clip
-    // is being recorded, appends this frame until post_roll is satisfied.
+    // Capture thread: hand every (downscaled) frame to the store (cheap enqueue).
     void on_frame(const GrayImage& frame);
 
-    // Start an event clip: writes the pre-roll immediately, then records the next
-    // post_roll frames. Returns the clip directory (empty on failure). Enforces
-    // the max_clips cap by evicting the oldest clip(s).
+    // Any thread (typically the VLM thread on alert): start an event clip.
+    // Returns the directory the clip will be written to (created synchronously).
     std::string begin_event(const std::string& event_id);
 
-    bool recording() const { return remaining_post_ > 0; }
-    size_t stored_clips() const;
+    // Block until the writer has drained the queue (tests / shutdown).
+    void flush();
+
+    size_t stored_clips() const { return stored_.load(); }
 
 private:
-    void write_frame_to_current(const GrayImage& f);
-    void evict_to_cap();
+    struct Cmd {
+        enum Type { Frame, Begin } type = Frame;
+        GrayImage frame;
+        std::string dir;
+    };
+    void worker_loop();
 
     ClipConfig config_;
-    std::deque<GrayImage> preroll_;  // ring of recent frames (<= pre_roll_frames)
-    std::string current_dir_;
-    int current_idx_ = 0;
-    int remaining_post_ = 0;
-    int frame_counter_ = 0;  // for sample_every
-    std::deque<std::string> clip_dirs_;  // oldest -> newest, for eviction
+    std::thread worker_;
+    std::mutex mu_;
+    std::condition_variable cv_;
+    std::condition_variable drained_cv_;
+    std::deque<Cmd> queue_;
+    bool stop_ = false;
+    bool processing_ = false;  // a command is popped and being written
+    std::atomic<size_t> stored_{0};
+    std::atomic<uint64_t> dropped_frames_{0};
 };
 
 }  // namespace nightjar

@@ -39,15 +39,13 @@ void test_clip_has_preroll_and_postroll() {
     cfg.post_roll_frames = 8;
     EventClipStore store(cfg);
 
-    // 10 frames of context (ring keeps last 5).
-    for (int i = 0; i < 10; ++i) store.on_frame(tiny(uint8_t(i)));
+    for (int i = 0; i < 10; ++i) store.on_frame(tiny(uint8_t(i)));  // ring keeps last 5
     std::string clip = store.begin_event("e1");
     CHECK(!clip.empty());
-    // Feed post-roll frames.
-    for (int i = 0; i < 8; ++i) store.on_frame(tiny(100 + i));
-    CHECK(!store.recording());  // post-roll satisfied
+    for (int i = 0; i < 8; ++i) store.on_frame(tiny(100 + i));  // post-roll
+    store.flush();
 
-    // Clip should contain pre_roll (5) + post_roll (8) = 13 frames.
+    // pre_roll (5) + post_roll (8) = 13 frames.
     CHECK_EQ(count_pgm(clip), size_t(13));
     fs::remove_all(cfg.dir);
 }
@@ -67,8 +65,9 @@ void test_cap_evicts_oldest() {
         std::string c = store.begin_event("e" + std::to_string(i));
         if (i == 0) first = c;
     }
-    CHECK_EQ(store.stored_clips(), size_t(3));       // never exceeds the cap
-    CHECK(!fs::exists(first));                        // oldest was evicted from disk
+    store.flush();
+    CHECK_EQ(store.stored_clips(), size_t(3));  // never exceeds the cap
+    CHECK(!fs::exists(first));                    // oldest evicted from disk
     fs::remove_all(cfg.dir);
 }
 
@@ -80,6 +79,7 @@ void test_preroll_ring_bounded() {
     EventClipStore store(cfg);
     for (int i = 0; i < 100; ++i) store.on_frame(tiny(uint8_t(i)));  // ring never grows past 3
     std::string clip = store.begin_event("e");
+    store.flush();
     CHECK_EQ(count_pgm(clip), size_t(3));  // only the last 3 pre-roll frames
     fs::remove_all(cfg.dir);
 }
