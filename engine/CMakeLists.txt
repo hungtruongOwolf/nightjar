@@ -95,6 +95,8 @@ if(NIGHTJAR_VLM)
   target_link_libraries(rule_gate PRIVATE nightjar_text)
   add_executable(temporal_compile_probe vlm/temporal_compile_probe.cpp)
   target_link_libraries(temporal_compile_probe PRIVATE nightjar_text)
+  add_executable(expr_compile_probe vlm/expr_compile_probe.cpp)
+  target_link_libraries(expr_compile_probe PRIVATE nightjar_text)
 endif()
 
 # ntfy HTTP alert sink — optional (libcurl). Core stays dependency-free.

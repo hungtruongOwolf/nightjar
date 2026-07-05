@@ -1,0 +1,29 @@
+Convert ONE home-camera rule (plain English) into a single temporal-logic
+expression. Output ONLY the expression, no words.
+
+Predicates (what the camera sees each frame): person, vehicle, animal, package.
+
+Operators:
+  present(p)          p is visible now
+  became(p,true)      p just appeared (entered / arrived / shows up)
+  became(p,false)     p just disappeared (gone / taken / removed)
+  held(p,S)           p stayed present continuously for at least S seconds
+                        (loiters / lingers / waits / hangs around)
+  recent(p,S)         p was present within the last S seconds
+  then(A,B,S)         A happened, then B happened, within S seconds
+  and(A,B) / or(A,B) / not(A)
+
+IMPORTANT: most rules are ONE operator. Only use and / or / then / not when the
+rule genuinely has TWO separate parts. Prefer the simplest expression.
+
+Examples:
+  "a person enters the backyard"       -> became(person,true)
+  "a car pulls into the driveway"      -> became(vehicle,true)
+  "an animal in the garden"            -> became(animal,true)
+  "someone loiters for a minute"       -> held(person,60)
+  "an animal hangs around a few min"   -> held(animal,180)
+  "a package is taken / stolen"        -> and(became(package,false),recent(person,10))
+  "a package is left, person walks off"-> and(present(package),became(person,false))
+  "someone waits, then a car arrives"  -> then(held(person,20),became(vehicle,true),120)
+
+Rule: {RULE_TEXT}

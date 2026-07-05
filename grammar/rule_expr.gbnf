@@ -1,0 +1,11 @@
+# A tiny composable temporal logic over debounced predicates. The compiler emits
+# ONE expression; a deterministic evaluator runs it. GBNF guarantees the syntax
+# is always valid — only semantics are up to the model. Depth-2 (a composite of
+# simple terms) keeps it bounded and safe, and covers loiter/theft/left-behind/
+# sequence without hardcoding a trigger per situation.
+root ::= composite | simple
+composite ::= "and(" simple "," simple ")" | "or(" simple "," simple ")" | "then(" simple "," simple "," num ")" | "not(" simple ")"
+simple ::= "held(" pred "," num ")" | "became(" pred "," boolv ")" | "recent(" pred "," num ")" | "present(" pred ")"
+pred ::= "person" | "vehicle" | "animal" | "package"
+boolv ::= "true" | "false"
+num ::= [0-9] [0-9]*
