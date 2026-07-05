@@ -41,18 +41,23 @@ flowchart LR
 
 ---
 
-## Why this exists — not a smarter camera, *programmable perception*
+## Why this exists — the last mile of AI is a sentence
 
-A Ring or Nest only says *"motion detected."* Making a camera alert on **what you actually care about** normally needs an ML engineer, training data, and a cloud GPU. Nightjar collapses that to **one sentence, on hardware you already own.**
+Arm has shipped **~300 billion chips**. The smartest ones are in a drawer near you: that old phone is a camera, a neural engine, a battery and a radio — a supercomputer from a few years ago — switched off, waiting for landfill. At the same time, teaching a camera to notice **the one thing you actually care about** still demands an ML team, a labelled dataset, and a cloud GPU that quietly streams your living room to someone else's servers.
 
-> **The spreadsheet moment for computer vision:** spreadsheets let anyone program logic without being a programmer. Nightjar lets anyone program a camera without being an ML engineer.
+**Nightjar collapses all of that into one plain-English sentence, on hardware you already own, that never phones home.**
 
-| Vision pillar | What it changes |
+> ### The spreadsheet moment for computer vision.
+> VisiCalc didn't turn people into programmers — it let anyone *express logic* and the machine ran it, and a whole economy fell out. Nightjar doesn't turn you into an ML engineer — you *describe what matters* (*"tell me if someone loiters near my car after 10pm"*) and a forgotten phone watches for it, on-device, forever, for free. The addressable users aren't developers. They're **everyone with a camera and a worry.**
+
+| Pillar | The bet |
 |---|---|
-| **Democratized vision** | Program a camera in plain English — no ML, no cloud, no code |
-| **Wakes billions of idle Arm devices** | Every old phone is a supercomputer with a camera + NPU + battery. Reactivate it. |
-| **Privacy over surveillance-capitalism** | Images never leave the device. No account, no subscription, works offline. |
-| **Beyond security** | *"tell me if grandma hasn't moved in 2 hours"* - *"if the baby climbs out of the crib"* - *"when the delivery arrives"* — same engine, new sentence |
+| **Perception becomes a sentence** | From "hire an ML team + rent a GPU" to "type what matters." The barrier to programming a camera drops to **zero**. |
+| **Resurrect a billion idle devices** | The greenest, cheapest AI accelerator on Earth is the one already in your drawer. Nightjar gives e-waste **eyes and a job** — no new silicon, no data centre. |
+| **Flip the surveillance model** | Today the camera works for the cloud. Nightjar makes it work **for you**: pixels never leave the device, no account, no subscription, offline by default. Privacy isn't a setting — it's the architecture. |
+| **One engine, infinite jobs** | *"if grandma hasn't moved in 2 hours"* · *"if the baby climbs out of the crib"* · *"when the delivery arrives"* · *"if the stove was left on"* — security is just the first sentence. Elder-care, child-safety, accessibility, wildlife, retail: **same engine, new sentence.** |
+
+**The endgame:** a private, programmable eye on every idle screen — and the pattern underneath (a small model as a per-frame *sensor*, deterministic code as the *brain*) is how on-device AI should be built. This repo is the working proof, running today on Arm.
 
 ---
 

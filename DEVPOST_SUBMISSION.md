@@ -38,6 +38,16 @@ over *time*, so it fires on conditions a closed-vocabulary detector can't expres
 budget. And it's honest: published numbers include the misses; degraded modes
 say so.
 
+**The bigger bet.** Arm has shipped ~300 billion chips; the smartest are idle in
+drawers. Nightjar is the *spreadsheet moment for computer vision* — VisiCalc let
+anyone express logic without being a programmer; Nightjar lets anyone program a
+camera without being an ML engineer, on a phone they already own, with pixels
+that never leave the device. Security is just the first sentence: *"tell me if
+grandma hasn't moved in 2 hours"*, *"if the baby climbs out of the crib"* — same
+engine, new sentence. The pattern underneath — a small model as a per-frame
+**sensor**, deterministic µs code as the **brain** — is a reusable blueprint for
+how on-device AI should be built on Arm.
+
 ## Functionality / Output
 
 - **Program in English → compiled rule.** On-device, an English sentence becomes
