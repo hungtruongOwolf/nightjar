@@ -48,18 +48,22 @@ struct MonitorView: View {
 
                     // Hardware / power — the efficiency + endurance story, live.
                     VStack(alignment: .leading, spacing: 12) {
-                        MonoLabel(text: "HARDWARE & POWER", size: 9.5, opacity: 0.5)
-                        Row(k: "Battery", v: driver.battery.percent >= 0 ? "\(driver.battery.percent)%\(driver.battery.charging ? " · charging" : "")" : "n/a",
-                            vColor: driver.battery.charging ? NW.green : NW.cream)
-                        Row(k: "Est. guarding runtime", v: driver.enduranceText,
-                            vColor: driver.enduranceText.hasPrefix("~") ? NW.green : NW.cream)
+                        MonoLabel(text: "EFFICIENCY (NIGHTJAR'S LEVER)", size: 9.5, opacity: 0.5)
+                        // The honest, Nightjar-specific number: how little the expensive
+                        // path runs. This is what buys endurance on a dedicated device.
                         Bar(label: "VLM compute avoided (2 min)", pct: w.skippedPct, tint: NW.green)
                         Row(k: "Tier-2 model", v: driver.tier2, vColor: driver.tier2.hasPrefix("Smol") ? NW.green : NW.cream)
                         Row(k: "Thermal state", v: thermal().0, vColor: thermal().1)
                         Row(k: "Data leaving device", v: "none", vColor: NW.green)
+
+                        Divider().overlay(NW.muted(0.1)).padding(.vertical, 2)
+                        MonoLabel(text: "BATTERY (WHOLE MACHINE)", size: 9.5, opacity: 0.5)
+                        Row(k: "Charge", v: driver.battery.percent >= 0 ? "\(driver.battery.percent)%\(driver.battery.charging ? " · charging" : "")" : "n/a",
+                            vColor: driver.battery.charging ? NW.green : NW.cream)
+                        Row(k: "Time-to-empty", v: driver.enduranceText, vColor: NW.muted(0.7))
                     }.padding(16).background(NW.card).cornerRadius(16)
 
-                    Text("Runtime uses the OS battery estimate (calibrated to the whole machine). The cheap NEON gate skipping most frames is what keeps Nightjar's own draw low — that's the perf-per-watt lever, shown as compute avoided above.")
+                    Text("Time-to-empty is the OS estimate for the WHOLE machine under everything it's running (on a dev Mac: Xcode, builds, the display, Nightjar). No app can measure just its own battery draw without root, so we don't pretend to. Nightjar's real endurance lever is above — the gate skipping most frames — and it's measured properly on a dedicated guard phone, where whole-device ≈ Nightjar.")
                         .font(.system(size: 12)).lineSpacing(3).foregroundColor(NW.muted(0.5))
 
                     if driver.tier2.hasPrefix("Smol") {

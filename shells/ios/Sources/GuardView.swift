@@ -117,21 +117,19 @@ final class EngineDriver: ObservableObject {
 
     private func tickBattery() {
         let b = Battery.read(); battery = b
-        if b.charging { enduranceText = "on power (endurance is measured on battery)"; return }
-        // Prefer the OS time-to-empty — it's calibrated to the whole machine and
-        // is the honest number. (macOS provides it; it may say "measuring…" for
-        // the first minute after unplugging.)
+        if b.charging { enduranceText = "on power"; return }
+        // This is the OS time-to-empty for the WHOLE machine under current load
+        // (on a dev Mac that's Xcode/builds/display too, not Nightjar alone). We
+        // can't isolate one app's draw without root, so we label it honestly.
         if let sys = b.systemHoursRemaining, sys > 0 {
-            enduranceText = String(format: "~%.1f h left (system estimate)", sys)
+            enduranceText = String(format: "~%.1f h · whole machine", sys)
             return
         }
-        // Fallback (iOS, no OS estimate): our own drain, but only over a LONG,
-        // stable window so startup spikes don't produce a silly number.
         if let (t0, p0) = batStart, b.percent >= 0 {
             let hrs = Date().timeIntervalSince(t0) / 3600
             let drop = Double(p0 - b.percent)
-            if hrs >= 0.17 && drop >= 2 {  // ≥10 min and ≥2% drop
-                enduranceText = String(format: "~%.1f h left at this rate", Double(b.percent) / (drop / hrs))
+            if hrs >= 0.17 && drop >= 2 {
+                enduranceText = String(format: "~%.1f h · whole machine", Double(b.percent) / (drop / hrs))
                 return
             }
         }
