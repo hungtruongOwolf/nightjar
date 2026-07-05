@@ -102,6 +102,8 @@ if(NIGHTJAR_VLM)
   target_link_libraries(raw_compile_probe PRIVATE nightjar_text)
   add_executable(compile_eval vlm/compile_eval.cpp)
   target_link_libraries(compile_eval PRIVATE nightjar_text)
+  add_executable(nightjar_flow vlm/nightjar_flow.cpp)
+  target_link_libraries(nightjar_flow PRIVATE nightjar_text nightjar_vlm)
 endif()
 
 # ntfy HTTP alert sink — optional (libcurl). Core stays dependency-free.
