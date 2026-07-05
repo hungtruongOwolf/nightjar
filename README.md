@@ -147,6 +147,8 @@ Every optimization is a real number, not a claim. iPhone A15 figures are pending
 
 **End-to-end (real SmolVLM, encoder on Metal, LLM on CPU):** VLM `p50 149 ms`, event->alert `p50 174 ms / p99 666 ms`. ISA: `FEAT_DotProd=1 - FEAT_I8MM=1 - FEAT_SME=0`.
 
+**Arm SIMD, proven:** the Tier-1 gate compiles to real NEON — `uabd.16b` (abs-diff), `ushll/ushl.4s` (fixed-point EMA), `uaddw.8h` (block counts), 294 vector-lane ops in one object — with a scalar twin + parity test. Disassembly + intrinsic→instruction map: [`docs/neon-isa.md`](docs/neon-isa.md).
+
 **Three Arm platforms, one source:** the portable engine builds and passes its full test suite on **macOS (M2 Max)**, **Linux aarch64** (`Dockerfile.linux-arm64`), and **iPhone (Simulator-verified today, A15 pending a cable)**. On Linux aarch64 the **KleidiAI** INT4 kernels give **+7.2% prefill** (the image-token regime that dominates VLM latency) — measured on/off, honest reading in [`bench/kleidiai_results.md`](bench/kleidiai_results.md).
 
 The six mobile constraints the track names:
