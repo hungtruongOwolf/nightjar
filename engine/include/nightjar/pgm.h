@@ -22,4 +22,7 @@ struct GrayImage {
 // whitespace between fields. Only maxval <= 255 (8-bit) is accepted.
 std::optional<GrayImage> read_pgm(const std::string& path);
 
+// Write a GrayImage as a binary (P5) PGM. Returns false on I/O error.
+bool write_pgm(const std::string& path, const GrayImage& img);
+
 }  // namespace nightjar

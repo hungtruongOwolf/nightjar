@@ -59,4 +59,16 @@ std::optional<GrayImage> read_pgm(const std::string& path) {
     return img;
 }
 
+bool write_pgm(const std::string& path, const GrayImage& img) {
+    if (img.width <= 0 || img.height <= 0 ||
+        img.pixels.size() != static_cast<size_t>(img.width) * img.height) {
+        return false;
+    }
+    std::unique_ptr<std::FILE, decltype(&std::fclose)> f(std::fopen(path.c_str(), "wb"),
+                                                         &std::fclose);
+    if (!f) return false;
+    std::fprintf(f.get(), "P5\n%d %d\n255\n", img.width, img.height);
+    return std::fwrite(img.pixels.data(), 1, img.pixels.size(), f.get()) == img.pixels.size();
+}
+
 }  // namespace nightjar

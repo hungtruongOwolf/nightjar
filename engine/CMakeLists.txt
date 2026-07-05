@@ -32,6 +32,7 @@ add_library(nightjar
   src/temporal_rule_engine.cpp
   src/scripted_predicate_vlm.cpp
   src/energy_meter.cpp
+  src/event_clip_store.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
