@@ -4,22 +4,10 @@
 
 #include <cstdio>
 
-// Vendored public-domain single-header encoder; silence its warnings, not ours.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "third_party/stb_image_write.h"
-#pragma clang diagnostic pop
+#include "nightjar/clip_encoder.h"  // encode_gray_png — stb implementation lives in the core
 
 namespace nightjar {
 namespace {
-
-void png_writer(void* ctx, void* data, int len) {
-    auto* out = static_cast<std::vector<uint8_t>*>(ctx);
-    const auto* bytes = static_cast<const uint8_t*>(data);
-    out->insert(out->end(), bytes, bytes + len);
-}
 
 size_t discard_body(char*, size_t size, size_t nmemb, void*) { return size * nmemb; }
 
@@ -34,13 +22,6 @@ const char* subject_word(Subject s) {
 }
 
 }  // namespace
-
-std::vector<uint8_t> encode_gray_png(const uint8_t* pixels, int size) {
-    std::vector<uint8_t> out;
-    if (!pixels || size <= 0) return out;
-    stbi_write_png_to_func(png_writer, &out, size, size, /*comp=*/1, pixels, /*stride=*/size);
-    return out;
-}
 
 NtfyFields ntfy_fields_for(const Alert& alert) {
     NtfyFields f;

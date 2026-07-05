@@ -156,6 +156,7 @@ void test_event_captures_clip_and_detail() {
     ccfg.dir = clipdir.string();
     ccfg.pre_roll_frames = 3;
     ccfg.post_roll_frames = 4;
+    ccfg.encoder = pgm_encoder();
     EventClipStore clips(ccfg);
 
     Pipeline pipe(test_config(), &rules, &vlm, &sink, &tel, &clips);

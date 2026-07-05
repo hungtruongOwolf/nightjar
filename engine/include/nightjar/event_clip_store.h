@@ -8,6 +8,7 @@
 #include <string>
 #include <thread>
 
+#include "nightjar/clip_encoder.h"
 #include "nightjar/pgm.h"
 
 namespace nightjar {
@@ -18,6 +19,10 @@ struct ClipConfig {
     int pre_roll_frames = 30;    // frames of context kept before the event (~1s @ 30fps)
     int post_roll_frames = 60;   // frames recorded after the event fires (~2s)
     int queue_max = 240;         // command-queue cap; oldest frame commands dropped if exceeded
+    // How clip frames are serialized. Default JPEG (~10x smaller than raw PGM);
+    // the harness can pass pgm_encoder() for lossless, the iOS shell a hardware
+    // HEVC encoder. Frames are already downscaled + cropped upstream.
+    ClipEncoder encoder = jpeg_encoder(70);
 };
 
 // Bounded, rotating on-device clip storage — the answer to "camera memory is

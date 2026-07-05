@@ -37,6 +37,7 @@ void test_clip_has_preroll_and_postroll() {
     cfg.dir = fresh_dir("roll");
     cfg.pre_roll_frames = 5;
     cfg.post_roll_frames = 8;
+    cfg.encoder = pgm_encoder();
     EventClipStore store(cfg);
 
     for (int i = 0; i < 10; ++i) store.on_frame(tiny(uint8_t(i)));  // ring keeps last 5
@@ -56,6 +57,7 @@ void test_cap_evicts_oldest() {
     cfg.pre_roll_frames = 2;
     cfg.post_roll_frames = 0;
     cfg.max_clips = 3;  // bounded storage
+    cfg.encoder = pgm_encoder();
     EventClipStore store(cfg);
 
     std::string first;
@@ -76,6 +78,7 @@ void test_preroll_ring_bounded() {
     cfg.dir = fresh_dir("ring");
     cfg.pre_roll_frames = 3;
     cfg.post_roll_frames = 0;
+    cfg.encoder = pgm_encoder();
     EventClipStore store(cfg);
     for (int i = 0; i < 100; ++i) store.on_frame(tiny(uint8_t(i)));  // ring never grows past 3
     std::string clip = store.begin_event("e");

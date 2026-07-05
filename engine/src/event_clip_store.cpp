@@ -73,9 +73,14 @@ void EventClipStore::worker_loop() {
     int remaining_post = 0;
 
     auto write_frame = [&](const GrayImage& f) {
+        const EncodedFrame ef = config_.encoder(f);
         char name[64];
-        std::snprintf(name, sizeof(name), "frame_%04d.pgm", cur_idx++);
-        write_pgm((fs::path(cur_dir) / name).string(), f);
+        std::snprintf(name, sizeof(name), "frame_%04d.%s", cur_idx++, ef.ext.c_str());
+        std::FILE* fp = std::fopen((fs::path(cur_dir) / name).string().c_str(), "wb");
+        if (fp) {
+            std::fwrite(ef.bytes.data(), 1, ef.bytes.size(), fp);
+            std::fclose(fp);
+        }
     };
 
     for (;;) {
