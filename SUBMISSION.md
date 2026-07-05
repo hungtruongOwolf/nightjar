@@ -33,15 +33,31 @@ make demo    # full pipeline on a synthetic clip -> alerts + report.md
 ```
 Real inference + KleidiAI: see `JUDGES.md` Tier 2 and `bench/kleidiai_results.md`.
 
+## Track (read this — differs from earlier planning docs)
+
+Per the official rules, the submission tracks are **Track 1 Optimization output**
+(source code), **Track 2 Migration**, **Track 3 Scale + learning completion**
+(proof artifacts / Arm learning-path screenshots). Nightjar is an **on-device AI
+optimization** → **submit under Track 1** (domain: Edge AI). The "complete an Arm
+learning path" proof artifact is a **Track 3** requirement — **not required for
+Track 1**. (CLAUDE.md's "Track 3 Mobile AI" framing predates these rules; reconcile.)
+
 ## TODO before you submit (needs you)
 
-- [ ] **Record the demo video** (≤3 min) on the Mac — follow `VIDEO_SCRIPT.md`.
-- [ ] **Complete ≥1 Arm learning path** and screenshot it — the challenge's
-      required proof artifact. Add the screenshot to the repo / submission.
-- [ ] *(optional, great for the video)* install the **ntfy** app on your phone,
+- [ ] **Register**: click *Join Hackathon* on Devpost + create a free **Arm
+      Developer Program** account (both are in the rules' "How to Enter").
+- [ ] **Fill the Devpost submission form** — copy the write-up from
+      `DEVPOST_SUBMISSION.md` (Project Overview / why-it-wins, Functionality /
+      Output, Setup Instructions), select **Track 1**, paste the repo URL.
+- [ ] **Confirm the repo About shows the MIT license** (GitHub auto-detects the
+      `LICENSE` file — check the right sidebar says "MIT License").
+- [ ] **Record + upload the demo video** (≤3 min) — follow `VIDEO_SCRIPT.md`,
+      upload to **YouTube/Vimeo/Youku** (public/unlisted), paste the link in the
+      form. Optional but strongly weighted for judges.
+- [ ] *(optional, great money-shot for the video)* install the **ntfy** app,
       subscribe to a topic, enter it on the rules screen → alerts push live.
-- [ ] **Submit**: public repo link (github.com/hungtruongOwolf/nightjar) + the
-      video, on the challenge portal.
+- [ ] *(only if you instead submit Track 3)* complete ≥1 Arm learning path +
+      screenshot as the proof artifact.
 
 ## Honest caveats (kept visible, per our own rules)
 
