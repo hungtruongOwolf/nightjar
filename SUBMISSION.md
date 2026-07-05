@@ -33,14 +33,16 @@ make demo    # full pipeline on a synthetic clip -> alerts + report.md
 ```
 Real inference + KleidiAI: see `JUDGES.md` Tier 2 and `bench/kleidiai_results.md`.
 
-## Track (read this — differs from earlier planning docs)
+## Track — **Track 3: Mobile AI**
 
-Per the official rules, the submission tracks are **Track 1 Optimization output**
-(source code), **Track 2 Migration**, **Track 3 Scale + learning completion**
-(proof artifacts / Arm learning-path screenshots). Nightjar is an **on-device AI
-optimization** → **submit under Track 1** (domain: Edge AI). The "complete an Arm
-learning path" proof artifact is a **Track 3** requirement — **not required for
-Track 1**. (CLAUDE.md's "Track 3 Mobile AI" framing predates these rules; reconcile.)
+Per the Devpost **Track Details** page (the authoritative taxonomy): Track 1 =
+Physical AI, Track 2 = Cloud AI, **Track 3 = Mobile AI** — "AI that runs locally
+on Arm-powered client devices such as smartphones… camera intelligence… private,
+offline-capable." That is exactly Nightjar → **submit Track 3**. Track 3 is a
+**source-code submission** (which we have); its listed learning paths (KleidiAI /
+on-device LLM) are **optional resources, not a required artifact**. (The
+"Optimization/Migration/Scale+learning" wording in the generic Official Rules
+section does not match the Track Details page; the Track Details page governs.)
 
 ## TODO before you submit (needs you)
 
@@ -48,7 +50,7 @@ Track 1**. (CLAUDE.md's "Track 3 Mobile AI" framing predates these rules; reconc
       Developer Program** account (both are in the rules' "How to Enter").
 - [ ] **Fill the Devpost submission form** — copy the write-up from
       `DEVPOST_SUBMISSION.md` (Project Overview / why-it-wins, Functionality /
-      Output, Setup Instructions), select **Track 1**, paste the repo URL.
+      Output, Setup Instructions), select **Track 3 — Mobile AI**, paste the repo URL.
 - [ ] **Confirm the repo About shows the MIT license** (GitHub auto-detects the
       `LICENSE` file — check the right sidebar says "MIT License").
 - [ ] **Record + upload the demo video** (≤3 min) — follow `VIDEO_SCRIPT.md`,
@@ -56,8 +58,9 @@ Track 1**. (CLAUDE.md's "Track 3 Mobile AI" framing predates these rules; reconc
       form. Optional but strongly weighted for judges.
 - [ ] *(optional, great money-shot for the video)* install the **ntfy** app,
       subscribe to a topic, enter it on the rules screen → alerts push live.
-- [ ] *(only if you instead submit Track 3)* complete ≥1 Arm learning path +
-      screenshot as the proof artifact.
+- [ ] *(optional bonus, not required)* complete a Track-3 KleidiAI learning path
+      (e.g. "Measure LLM inference performance with KleidiAI") + screenshot — extra
+      Impact / Arm-ecosystem credit; our KleidiAI bench already does this in spirit.
 
 ## Honest caveats (kept visible, per our own rules)
 

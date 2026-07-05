@@ -1,8 +1,13 @@
 # Devpost submission write-up (copy-paste into the form)
 
-**Track:** Track 1 — Optimization output. *(Nightjar optimizes on-device AI
-inference on Arm; domain = Edge AI. See the note in SUBMISSION.md about the
-Track 3 "scale + learning completion" mismatch with earlier planning docs.)*
+**Track:** **Track 3 — Mobile AI.** Nightjar runs its inference fully on-device
+on an Arm-powered client (a spare iPhone / Apple-Silicon Mac): **camera
+intelligence**, offline-capable, private, low-latency — the track's definition
+verbatim. It's optimized for the exact mobile constraints the track names —
+**model size** (244 MB Q4_0 + 190 MB mmproj), **memory** (≤1.4 GB budget),
+**responsiveness** (event→alert well under the target), **battery awareness**
+(88% of VLM compute gated), **offline** (airplane-mode), **TTFT** (encode ~32 ms)
+— using llama.cpp + **KleidiAI** ("or similar runtimes", per the track).
 
 **Repository:** https://github.com/hungtruongOwolf/nightjar (public, MIT license
 shown in About).
