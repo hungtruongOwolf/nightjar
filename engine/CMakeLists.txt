@@ -36,6 +36,7 @@ add_library(nightjar
   src/event_clip_store.cpp
   src/predicate_debouncer.cpp
   src/clip_encoder.cpp
+  src/differential_clip_codec.cpp
 )
 target_include_directories(nightjar PUBLIC include)
 
