@@ -1,0 +1,32 @@
+# KleidiAI on/off benchmark on Linux aarch64 — the Arm-specific optimization the
+# challenge rewards, measured cleanly (no Apple Accelerate to confound it, unlike
+# on macOS). Builds llama.cpp twice (KleidiAI on vs off) and runs llama-bench on
+# the SmolVLM INT4 model, so the delta is attributable to KleidiAI's Arm kernels.
+#
+#   docker build --platform linux/arm64 -f Dockerfile.kleidiai -t nightjar-kleidiai .
+#   docker run --rm --platform linux/arm64 -v "$PWD/models:/models" nightjar-kleidiai
+FROM --platform=linux/arm64 debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential clang cmake git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+# clang: llama.cpp's per-file Arm arch flags (+dotprod/+i8mm for KleidiAI
+# kernels) apply correctly under clang; gcc-12 here misses them and the kernels
+# #error out.
+ENV CC=clang CXX=clang++
+
+WORKDIR /work
+# sslVerify off: this build host sits behind a TLS-intercepting proxy; the clone
+# is a throwaway benchmark fetch, nothing is shipped from it.
+RUN git -c http.sslVerify=false clone --depth 1 https://github.com/ggml-org/llama.cpp.git
+
+# WITH KleidiAI (Arm INT4 matmul micro-kernels: dotprod / i8mm)
+RUN cmake -S llama.cpp -B build-on  -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF \
+      -DGGML_CPU_KLEIDIAI=ON  && cmake --build build-on  --target llama-bench -j 2
+# WITHOUT KleidiAI (stock ggml-cpu kernels)
+RUN cmake -S llama.cpp -B build-off -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF \
+      -DGGML_CPU_KLEIDIAI=OFF && cmake --build build-off --target llama-bench -j 2
+
+CMD sh -c "M=/models/SmolVLM-500M-Instruct-Q4_0.gguf; \
+  echo '=== WITHOUT KleidiAI ===' && ./build-off/bin/llama-bench -m \$M -p 128 -n 32 -t 4; \
+  echo '=== WITH KleidiAI ===='    && ./build-on/bin/llama-bench  -m \$M -p 128 -n 32 -t 4"
