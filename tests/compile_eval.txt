@@ -1,0 +1,13 @@
+# english | expected_subject | expected_trigger  (appears/stays/disappears)
+notify me if a person enters the backyard after 10pm | person | appears
+alert me when a car pulls into the driveway | vehicle | appears
+tell me if an animal gets into the garden at night | animal | appears
+warn me if a person loiters near the shed for a minute | person | stays
+someone hanging around the front gate for a few minutes | person | stays
+tell me if my package is stolen from the porch | package | disappears
+alert me if someone takes my bike from the yard | vehicle | disappears
+a dog shows up in the yard | animal | appears
+notify me if a delivery van arrives out front | vehicle | appears
+warn me if my parcel goes missing from the doorstep | package | disappears
+someone waits by the front door for a while | person | stays
+an intruder enters the house at night | person | appears

@@ -1,0 +1,1 @@
+root ::= "appears" | "stays" | "disappears"

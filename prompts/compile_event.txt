@@ -1,0 +1,12 @@
+appears = something enters/arrives/shows up. stays = lingers/loiters/waits/hangs around a while. disappears = is taken/stolen/removed/goes missing.
+a person enters => appears
+someone loiters for a minute => stays
+my package is stolen => disappears
+a car pulls in => appears
+someone waits by the gate => stays
+a parcel goes missing => disappears
+an animal hangs around => stays
+a person takes my bike => disappears
+a dog shows up => appears
+a thief grabs a package => disappears
+{RULE_TEXT} =>

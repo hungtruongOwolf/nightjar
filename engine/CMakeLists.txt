@@ -29,6 +29,7 @@ add_library(nightjar
   src/pipeline.cpp
   src/json_object.cpp
   src/rule_compiler.cpp
+  src/decomposed_rule_compiler.cpp
   src/temporal_rule_engine.cpp
   src/scripted_predicate_vlm.cpp
   src/energy_meter.cpp
@@ -97,6 +98,10 @@ if(NIGHTJAR_VLM)
   target_link_libraries(temporal_compile_probe PRIVATE nightjar_text)
   add_executable(expr_compile_probe vlm/expr_compile_probe.cpp)
   target_link_libraries(expr_compile_probe PRIVATE nightjar_text)
+  add_executable(raw_compile_probe vlm/raw_compile_probe.cpp)
+  target_link_libraries(raw_compile_probe PRIVATE nightjar_text)
+  add_executable(compile_eval vlm/compile_eval.cpp)
+  target_link_libraries(compile_eval PRIVATE nightjar_text)
 endif()
 
 # ntfy HTTP alert sink — optional (libcurl). Core stays dependency-free.

@@ -1,0 +1,9 @@
+How many seconds must the subject stay before alerting? Answer one number: 30, 60, 180, or 600.
+for a moment => 30
+for a minute => 60
+more than a minute => 60
+for a few minutes => 180
+for several minutes => 180
+for half an hour => 600
+(no duration given) => 60
+{RULE_TEXT} =>

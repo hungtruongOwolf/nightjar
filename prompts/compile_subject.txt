@@ -1,0 +1,11 @@
+person enters the yard => person
+a car arrives => vehicle
+a dog runs across the lawn => animal
+a package sits at the door => package
+my bike was stolen => vehicle
+someone takes my parcel => package
+a truck parks on the street => vehicle
+a cat in the garden => animal
+a person waits near my car => person
+a van pulls into the driveway => vehicle
+{RULE_TEXT} =>
