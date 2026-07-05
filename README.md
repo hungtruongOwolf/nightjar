@@ -4,7 +4,7 @@
 
 **Turn the spare phone in your drawer into a guard you program in one plain-English sentence — 100% on-device.**
 
-> Type *"tell me if someone loiters near my car after 10pm."* Nightjar compiles that once, on the phone, into a deterministic rule, then watches: a hand-written NEON motion gate (56 µs/frame) feeds an INT4 vision-language model only the ~1–5 % of frames that matter. No cloud. No account. No subscription. Airplane mode and it still works.
+> Type *"tell me if someone loiters near my car after 10pm."* Nightjar compiles that once, on the phone, into a deterministic rule, then watches: a hand-written NEON motion gate (58 µs/frame) feeds an INT4 vision-language model only the ~1–5 % of frames that matter. No cloud. No account. No subscription. Airplane mode and it still works.
 
 Built for the **Arm Create: AI Optimization Challenge 2026 — Track 3 (Mobile AI, "camera intelligence")**. All inference runs locally on Arm64 via llama.cpp + KleidiAI.
 
@@ -29,7 +29,7 @@ make demo    # full pipeline on a synthetic clip → alerts + a self-generated r
 
 ```mermaid
 flowchart LR
-  cam["Camera<br/>640x480, 30fps"] --> gate["NEON motion gate<br/>56us/frame - E-cores"]
+  cam["Camera<br/>640x480, 30fps"] --> gate["NEON motion gate<br/>58us/frame - E-cores"]
   gate -->|"~1-5% of frames"| best["Best-frame<br/>crop to 448"]
   best --> slot["ConflatingSlot<br/>keep-latest"]
   slot --> vlm["SmolVLM-500M INT4<br/>fact sensor - P-cores"]
@@ -144,7 +144,7 @@ Every optimization is a real number, not a claim. iPhone A15 figures are pending
 | Optimization | Lever | Result |
 |---|---|---|
 | Two-tier motion gate | run VLM on 1-5% of frames | **88% of VLM compute avoided** |
-| NEON Tier-1 gate | hand-written, scalar-twin tested | **56 us/frame** (budget 500 us) |
+| NEON Tier-1 gate | hand-written, scalar-twin tested | **58 us/frame** (budget 500 us) |
 | KV-cache reuse (encode-once) | image encoded once per event | VLM **586 -> 229 ms = 2.6x**, answers identical |
 | Fast-path decoupling | letterbox off the capture thread | gate p99 **4 ms -> 73 us = 54x** under burst |
 | INT4 clip storage | JPEG keyframe | **11.7x** vs raw |

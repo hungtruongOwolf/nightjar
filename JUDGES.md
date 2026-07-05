@@ -74,7 +74,7 @@ accuracy; `engine/build/kv_reuse_bench` reproduces the 2.6× KV-reuse win.
 
 | Claim | Reproduce with |
 |---|---|
-| NEON gate 56 µs/frame; scalar == NEON | `make bench` · `make test` (parity suites) |
+| NEON gate 58 µs/frame; scalar == NEON | `make bench` · `make test` (parity suites) |
 | VLM 2.6× via KV-reuse, identical answers | `kv_reuse_bench` (Tier 2) |
 | Fast path stays µs under a saturated VLM | `engine/build/nightjar_concurrency_bench` |
 | 88 % of VLM compute gated away | `engine/build/nightjar_ablation` |
