@@ -61,6 +61,10 @@ typedef struct {
                        onAlert:(void (^)(NSString *oneLiner))onAlert;
 - (void)submitPixelBuffer:(CVPixelBufferRef)pixelBuffer;
 
+// A grayscale snapshot of the most recent processed frame — the "photo" saved
+// with an alert. Caller releases. nil until the first frame.
+- (nullable CGImageRef)currentSnapshotCopy CF_RETURNS_RETAINED;
+
 // Simulator fallback: engine generates + streams frames itself.
 - (void)startSyntheticWithTrigger:(NSString *)trigger
                           onFrame:(void (^)(CGImageRef frame, NJStats stats))onFrame

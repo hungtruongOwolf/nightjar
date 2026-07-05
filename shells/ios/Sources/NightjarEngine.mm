@@ -11,8 +11,10 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <ctime>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -190,14 +192,15 @@ void render_scene(std::vector<uint8_t>& px, double t, int frame) {
         px[y * SW + x] = uint8_t(v < 0 ? 0 : (v > 255 ? 255 : v));
     }
 }
-CGImageRef make_gray_image(const std::vector<uint8_t>& px) {
-    CFDataRef data = CFDataCreate(nullptr, px.data(), px.size());
+CGImageRef make_gray_image_wh(const uint8_t* px, int w, int h) {
+    CFDataRef data = CFDataCreate(nullptr, px, (CFIndex)w * h);
     CGDataProviderRef p = CGDataProviderCreateWithCFData(data);
     CGColorSpaceRef cs = CGColorSpaceCreateDeviceGray();
-    CGImageRef img = CGImageCreate(SW, SH, 8, 8, SW, cs, kCGImageAlphaNone, p, nullptr, false, kCGRenderingIntentDefault);
+    CGImageRef img = CGImageCreate(w, h, 8, 8, w, cs, kCGImageAlphaNone, p, nullptr, false, kCGRenderingIntentDefault);
     CGColorSpaceRelease(cs); CGDataProviderRelease(p); CFRelease(data);
     return img;
 }
+CGImageRef make_gray_image(const std::vector<uint8_t>& px) { return make_gray_image_wh(px.data(), SW, SH); }
 
 BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     for (NSString* k in keys) if ([s containsString:k]) return YES;
@@ -219,6 +222,16 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     std::string _subject;
     std::shared_ptr<IPredicateVlm> _vlm;  // loaded once, reused across sessions
     NSString* _vlmName;
+    std::mutex _frameMu;
+    std::vector<uint8_t> _lastY;  // most recent frame (packed), for alert snapshots
+    int _lastW;
+    int _lastH;
+}
+
+- (CGImageRef)currentSnapshotCopy {
+    std::lock_guard<std::mutex> lk(_frameMu);
+    if (_lastY.empty()) return nullptr;
+    return make_gray_image_wh(_lastY.data(), _lastW, _lastH);
 }
 
 - (void)setSubject:(NSString*)subjectKey {
@@ -291,6 +304,13 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     fv.ts_mono_ns = now_ns();
     fv.seq = _seq++;
     NJStats st = _engine->process(fv);
+    {  // keep a packed copy for alert snapshots
+        std::lock_guard<std::mutex> lk(_frameMu);
+        _lastW = fv.width; _lastH = fv.height;
+        _lastY.resize((size_t)fv.width * fv.height);
+        for (int y = 0; y < fv.height; ++y)
+            std::memcpy(&_lastY[(size_t)y * fv.width], fv.y_plane + (size_t)y * fv.stride, fv.width);
+    }
     CVPixelBufferUnlockBaseAddress(pb, kCVPixelBufferLock_ReadOnly);
     void (^cb)(NJStats) = _onStats;
     if (cb) dispatch_async(dispatch_get_main_queue(), ^{ cb(st); });

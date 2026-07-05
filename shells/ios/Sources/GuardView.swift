@@ -11,6 +11,16 @@ final class EngineDriver: ObservableObject {
     @Published var usingCamera = false
     @Published var tier2 = "loading…"
     @Published var loading = false
+    @Published var alerts: [AlertRecord] = []
+
+    // Every alert keeps the photo that triggered it — the evidence the user
+    // reviews later (the engine's EventClipStore is the fuller on-disk version).
+    private func record(_ text: String) {
+        alertText = text
+        let img: CGImage? = usingCamera ? engine.currentSnapshotCopy() : frame
+        alerts.insert(AlertRecord(text: text, image: img, date: Date()), at: 0)
+        if alerts.count > 30 { alerts.removeLast() }
+    }
 
     let engine = NightjarEngine()
     private lazy var camera = CameraCapture(engine: engine)
@@ -28,7 +38,7 @@ final class EngineDriver: ObservableObject {
             DispatchQueue.global(qos: .userInitiated).async {
                 self.engine.startCamera(withTrigger: trigger,
                                         onStats: { [weak self] s in self?.stats = s },
-                                        onAlert: { [weak self] t in self?.alertText = t })
+                                        onAlert: { [weak self] t in self?.record(t) })
                 self.camera.start()
                 let name = self.engine.tier2Name()
                 DispatchQueue.main.async { self.tier2 = name; self.loading = false }
@@ -37,7 +47,7 @@ final class EngineDriver: ObservableObject {
             usingCamera = false
             engine.startSynthetic(withTrigger: trigger,
                                   onFrame: { [weak self] img, s in self?.frame = img; self?.stats = s },
-                                  onAlert: { [weak self] t in self?.alertText = t })
+                                  onAlert: { [weak self] t in self?.record(t) })
             tier2 = engine.tier2Name()
         }
     }
@@ -64,6 +74,7 @@ struct GuardView: View {
     @State private var since = Date()
     @State private var showAlert = false
     @State private var showMonitor = false
+    @State private var showAlerts = false
     @State private var dimmed = false
 
     var body: some View {
@@ -85,6 +96,7 @@ struct GuardView: View {
             }
         }
         .sheet(isPresented: $showMonitor) { MonitorView(driver: driver) }
+        .sheet(isPresented: $showAlerts) { AlertsView(alerts: driver.alerts) }
     }
 
     private var preview: some View {
@@ -133,22 +145,20 @@ struct GuardView: View {
     // separate Monitor.
     private var controlBar: some View {
         HStack(spacing: 9) {
-            HStack(spacing: 8) {
-                BreatheDot(color: dimmed ? NW.muted(0.4) : NW.green)
-                Text(dimmed ? "Dimmed · still watching" : "Guarding · \(armedCount) armed")
-                    .font(.system(size: 12.5, weight: .semibold)).foregroundColor(NW.muted(0.85)).lineLimit(1)
-            }
-            Spacer(minLength: 6)
+            BreatheDot(color: dimmed ? NW.muted(0.4) : NW.green)
+            Text(dimmed ? "Dimmed" : "Guarding").font(.system(size: 12.5, weight: .semibold)).foregroundColor(NW.muted(0.85))
+            Spacer(minLength: 4)
             Button { withAnimation { dimmed.toggle() } } label: { pill(dimmed ? "Wake" : "Dim") }
+            Button { showAlerts = true } label: { pill(driver.alerts.isEmpty ? "Alerts" : "Alerts \(driver.alerts.count)", accent: !driver.alerts.isEmpty) }
             Button { showMonitor = true } label: { pill("Monitor") }
             Button(action: onExit) { pill("Rules") }
-        }.padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 30)
+        }.padding(.horizontal, 14).padding(.top, 14).padding(.bottom, 30)
     }
 
-    private func pill(_ t: String) -> some View {
-        Text(t).font(.system(size: 12.5, weight: .semibold)).foregroundColor(NW.muted(0.7))
-            .padding(.horizontal, 13).padding(.vertical, 9)
-            .overlay(Capsule().stroke(NW.muted(0.28), style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
+    private func pill(_ t: String, accent: Bool = false) -> some View {
+        Text(t).font(.system(size: 12, weight: .semibold)).foregroundColor(accent ? NW.rose : NW.muted(0.7))
+            .padding(.horizontal, 11).padding(.vertical, 9)
+            .overlay(Capsule().stroke(accent ? NW.rose.opacity(0.6) : NW.muted(0.28), style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
     }
 
     // Power-save: hide the preview (engine keeps running), show Otto + clock.
