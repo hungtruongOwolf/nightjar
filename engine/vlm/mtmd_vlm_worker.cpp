@@ -28,7 +28,8 @@ struct MtmdVlmWorker::Impl {
     mtmd_context* mctx = nullptr;
 };
 
-MtmdVlmWorker::MtmdVlmWorker(const MtmdConfig& config) : subjects_(config.subjects) {
+MtmdVlmWorker::MtmdVlmWorker(const MtmdConfig& config)
+    : subjects_(config.subjects), reuse_image_kv_(config.reuse_image_kv) {
     (void)subjects_;  // retained for config compatibility; evaluate() drives predicates
     impl_ = new Impl();
     llama_backend_init();
@@ -140,8 +141,14 @@ bool MtmdVlmWorker::answer_one(void* bitmap_ptr, const std::string& question, Pr
 
 PredicateResult MtmdVlmWorker::evaluate(const CandidateFrame& candidate,
                                         const std::vector<Predicate>& predicates) {
+    if (!ok_) return {};
+    return reuse_image_kv_ ? evaluate_shared(candidate, predicates)
+                           : evaluate_reencode(candidate, predicates);
+}
+
+PredicateResult MtmdVlmWorker::evaluate_reencode(const CandidateFrame& candidate,
+                                                 const std::vector<Predicate>& predicates) {
     PredicateResult result;
-    if (!ok_) return result;
 
     // mtmd bitmaps are RGB; replicate the grayscale plane across 3 channels once,
     // then reuse for every predicate question.
@@ -158,6 +165,102 @@ PredicateResult MtmdVlmWorker::evaluate(const CandidateFrame& candidate,
         result.answers[p.id] = answer_one(bitmap, p.question, result);
     }
     mtmd_bitmap_free(bitmap);
+    return result;
+}
+
+// Optimization ①: encode + prefill the image (and the fixed "User:" preamble)
+// ONCE into the KV cache, then for each predicate rewind the KV to just after
+// the image and prefill only the short text question. The heavy vision encode
+// and image-token prefill are paid once, not once-per-predicate.
+PredicateResult MtmdVlmWorker::evaluate_shared(const CandidateFrame& candidate,
+                                               const std::vector<Predicate>& predicates) {
+    PredicateResult result;
+    const uint32_t w = static_cast<uint32_t>(candidate.image.size);
+    std::vector<unsigned char> rgb(static_cast<size_t>(w) * w * 3);
+    for (size_t i = 0; i < static_cast<size_t>(w) * w; ++i) {
+        const unsigned char v = candidate.image.pixels[i];
+        rgb[i * 3 + 0] = rgb[i * 3 + 1] = rgb[i * 3 + 2] = v;
+    }
+    mtmd_bitmap* bitmap = mtmd_bitmap_init(w, w, rgb.data());
+    if (!bitmap) return result;
+
+    llama_memory_t mem = llama_get_memory(impl_->lctx);
+    llama_memory_clear(mem, true);
+
+    // --- shared prefix: "User: <image>" encoded + prefilled once ---
+    const std::string marker = mtmd_default_marker();
+    const std::string prefix = "<|im_start|>User: " + marker;
+    mtmd_input_chunks* chunks = mtmd_input_chunks_init();
+    mtmd_input_text ptext{prefix.c_str(), /*add_special=*/true, /*parse_special=*/true};
+    const mtmd_bitmap* bitmaps[1] = {bitmap};
+    llama_pos p0 = 0;
+    if (mtmd_tokenize(impl_->mctx, chunks, &ptext, bitmaps, 1) == 0) {
+        const size_t n = mtmd_input_chunks_size(chunks);
+        for (size_t i = 0; i < n; ++i) {
+            const mtmd_input_chunk* chunk = mtmd_input_chunks_get(chunks, i);
+            if (mtmd_input_chunk_get_type(chunk) == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
+                auto t = steady::now();
+                if (mtmd_encode_chunk(impl_->mctx, chunk) != 0) break;
+                float* embd = mtmd_get_output_embd(impl_->mctx);
+                result.encode_ms += static_cast<float>(ms_since(t));
+                t = steady::now();
+                llama_pos np = p0;
+                if (mtmd_helper_decode_image_chunk(impl_->mctx, impl_->lctx, chunk, embd, p0, 0,
+                                                   2048, &np, nullptr, nullptr) != 0)
+                    break;
+                p0 = np;
+                result.prefill_ms += static_cast<float>(ms_since(t));
+            } else {
+                auto t = steady::now();
+                llama_pos np = p0;
+                if (mtmd_helper_eval_chunk_single(impl_->mctx, impl_->lctx, chunk, p0, 0, 2048,
+                                                  /*logits_last=*/false, &np) != 0)
+                    break;
+                p0 = np;
+                result.prefill_ms += static_cast<float>(ms_since(t));
+            }
+        }
+    }
+    mtmd_input_chunks_free(chunks);
+    mtmd_bitmap_free(bitmap);
+
+    // --- per predicate: rewind to p0, prefill only the text question ---
+    for (const Predicate& p : predicates) {
+        llama_memory_seq_rm(mem, 0, p0, -1);  // keep [0,p0) (image+preamble)
+
+        const std::string suffix = p.question + "<end_of_utterance>\nAssistant:";
+        std::vector<llama_token> toks(suffix.size() + 8);
+        const int nt = llama_tokenize(impl_->vocab, suffix.c_str(), (int)suffix.size(), toks.data(),
+                                      (int)toks.size(), /*add_special=*/false, /*parse_special=*/true);
+        if (nt <= 0) {
+            result.answers[p.id] = false;
+            continue;
+        }
+        toks.resize(nt);
+
+        auto t = steady::now();
+        // Positions continue automatically from p0 (KV was rewound to p0).
+        llama_batch batch = llama_batch_get_one(toks.data(), nt);
+        if (llama_decode(impl_->lctx, batch) != 0) {
+            result.answers[p.id] = false;
+            continue;
+        }
+        result.prefill_ms += static_cast<float>(ms_since(t));
+
+        auto td = steady::now();
+        llama_sampler* chain = llama_sampler_chain_init(llama_sampler_chain_default_params());
+        llama_sampler_chain_add(chain, llama_sampler_init_grammar(impl_->vocab, kGrammar, "root"));
+        llama_sampler_chain_add(chain, llama_sampler_init_greedy());
+        const llama_token tok = llama_sampler_sample(chain, impl_->lctx, -1);
+        char buf[32];
+        const int m = llama_token_to_piece(impl_->vocab, tok, buf, sizeof(buf), 0, false);
+        char answer = 'n';
+        for (int k = 0; k < m; ++k)
+            if (buf[k] == 'y' || buf[k] == 'n') answer = buf[k];
+        llama_sampler_free(chain);
+        result.decode_ms += static_cast<float>(ms_since(td));
+        result.answers[p.id] = (answer == 'y');
+    }
     return result;
 }
 

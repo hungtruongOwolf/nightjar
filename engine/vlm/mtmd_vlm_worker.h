@@ -14,6 +14,10 @@ struct MtmdConfig {
     std::string mmproj_path;   // mmproj vision encoder GGUF
     bool encoder_use_gpu = true;  // KT1: encoder on Metal ~34x faster than CPU
     int n_threads = 0;            // 0 => llama default
+    // Encode+prefill the image ONCE and reuse its KV across all predicate
+    // questions (only the short text differs) — the "encode-once, ask-many"
+    // optimization. Verify empirically (llama.cpp prefix-cache has caveats).
+    bool reuse_image_kv = false;
     // Which subjects to ask about. One focused y/n question per subject — KT1
     // found the 500M model reliable one-at-a-time (8/9) but noisy when asked
     // about several subjects in a single prompt. Set this to the union of the
@@ -58,11 +62,18 @@ private:
     // encode/prefill/decode split into `out`.
     bool answer_one(void* bitmap, const std::string& question, PredicateResult& out);
 
+    // Re-encode path: full encode+prefill per predicate (baseline).
+    PredicateResult evaluate_reencode(const CandidateFrame&, const std::vector<Predicate>&);
+    // Encode-once path: prefill image+preamble once, reuse its KV across
+    // predicates (only the text question is re-prefilled). Optimization ①.
+    PredicateResult evaluate_shared(const CandidateFrame&, const std::vector<Predicate>&);
+
     struct Impl;
     Impl* impl_ = nullptr;
     bool ok_ = false;
     std::string error_;
     std::vector<Subject> subjects_;
+    bool reuse_image_kv_ = false;
 };
 
 }  // namespace nightjar

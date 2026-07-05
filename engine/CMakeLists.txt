@@ -70,6 +70,8 @@ if(NIGHTJAR_VLM)
   target_link_libraries(vlm_probe PRIVATE nightjar_vlm)
   add_executable(vlm_ask vlm/vlm_ask.cpp)
   target_link_libraries(vlm_ask PRIVATE nightjar_vlm)
+  add_executable(kv_reuse_bench vlm/kv_reuse_bench.cpp)
+  target_link_libraries(kv_reuse_bench PRIVATE nightjar_vlm)
 endif()
 
 if(NIGHTJAR_VLM)
