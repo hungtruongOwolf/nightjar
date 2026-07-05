@@ -1,0 +1,23 @@
+# Nightjar on a THIRD Arm platform: Linux aarch64 (Neoverse-class / any Arm64
+# Linux). The engine is portable C++ with zero platform deps, so the same
+# source that runs on Apple Silicon and iPhone (A15) builds and passes here.
+# On Apple Silicon this runs natively (no emulation).
+#
+#   docker build --platform linux/arm64 -f Dockerfile.linux-arm64 -t nightjar-arm64 .
+#   docker run --rm --platform linux/arm64 nightjar-arm64
+FROM --platform=linux/arm64 debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential cmake make ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /nightjar
+COPY engine engine
+
+RUN cmake -S engine -B engine/build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build engine/build -j
+
+# Prove it: run the full test suite, the gate micro-bench, and the demo.
+CMD sh -c "uname -m && echo '--- tests ---' && (cd engine/build && ctest --output-on-failure) \
+    && echo '--- gate bench (Linux aarch64) ---' && ./engine/build/gate_bench \
+    && echo '--- demo ---' && ./engine/build/nightjar_demo | tail -20"

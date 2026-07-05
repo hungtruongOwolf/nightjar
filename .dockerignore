@@ -1,0 +1,8 @@
+.git
+models
+vendor
+**/build
+engine/build
+*.gguf
+bench/ios-kt1
+clips
