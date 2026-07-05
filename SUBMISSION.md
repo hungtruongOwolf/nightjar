@@ -58,9 +58,10 @@ section does not match the Track Details page; the Track Details page governs.)
       form. Optional but strongly weighted for judges.
 - [ ] *(optional, great money-shot for the video)* install the **ntfy** app,
       subscribe to a topic, enter it on the rules screen → alerts push live.
-- [ ] *(optional bonus, not required)* complete a Track-3 KleidiAI learning path
-      (e.g. "Measure LLM inference performance with KleidiAI") + screenshot, extra
-      Impact / Arm-ecosystem credit; our KleidiAI bench already does this in spirit.
+
+Note: Track 3 (Mobile AI) needs only the repo + write-up + optional video. There is
+no required learning path or proof artifact, and the project already uses KleidiAI
+for real (see `bench/kleidiai_results.md`), so there is nothing extra to study.
 
 ## Honest caveats (kept visible, per our own rules)
 
