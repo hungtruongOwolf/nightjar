@@ -242,17 +242,21 @@ struct RulesView: View {
                 (Text("The ").foregroundColor(NW.cream) + Text("watch list").foregroundColor(NW.rose).italic() + Text(".").foregroundColor(NW.cream)).font(NW.serif(32))
                 Spacer(); MonoLabel(text: "\(armed) ARMED", opacity: 0.4); OttoOwl(size: 34, showBelly: false)
             }.padding(.top, 56)
-            HStack(spacing: 10) { BreatheDot(color: NW.green); Text("Ready to guard · frames never leave the phone").font(.system(size: 13.5)).foregroundColor(NW.muted(0.8)); Spacer() }
+            HStack(spacing: 10) { BreatheDot(color: NW.green); Text("Ready to guard · frames never leave this \(deviceWord)").font(.system(size: 13.5)).foregroundColor(NW.muted(0.8)); Spacer() }
                 .padding(13).background(NW.card).cornerRadius(16)
             ForEach($rules) { $r in
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     ZStack { RoundedRectangle(cornerRadius: 10).fill(r.on ? NW.rose.opacity(0.14) : NW.muted(0.07)).frame(width: 34, height: 34)
                         Image(systemName: r.icon).font(.system(size: 15)).foregroundColor(r.on ? NW.rose : NW.muted(0.35)) }
                     VStack(alignment: .leading, spacing: 1) {
                         Text(r.title).font(.system(size: 14.5, weight: .semibold)).foregroundColor(NW.creamDim).lineLimit(1)
                         Text(r.sub).font(.system(size: 12)).foregroundColor(NW.muted(0.5))
                     }
-                    Spacer(); Toggle("", isOn: $r.on).labelsHidden().tint(NW.rose)
+                    Spacer()
+                    Button { rules.removeAll { $0.id == r.id } } label: {
+                        Image(systemName: "trash").font(.system(size: 13)).foregroundColor(NW.muted(0.35))
+                    }
+                    Toggle("", isOn: $r.on).labelsHidden().tint(NW.rose)
                 }.padding(13).background(NW.card).cornerRadius(16)
             }
             Button(action: onAdd) {

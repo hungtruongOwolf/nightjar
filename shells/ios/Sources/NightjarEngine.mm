@@ -321,7 +321,19 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
         if (worker->ok()) { _vlm = worker; _vlmName = @"SmolVLM-500M (INT4)"; return; }
     }
 #endif
-    _vlm = std::make_shared<ScriptedPredicateVlm>(std::map<std::string, bool>{{"person", true}}, 120);
+    // Scripted stand-in (Simulator / no model): recognizes "person" only, and is
+    // content-aware — true only when the candidate crop actually has a bright
+    // figure. That makes presence go false when the figure leaves, so a rising-
+    // edge ("appears") re-arms instead of firing just once per session.
+    _vlm = std::make_shared<ScriptedPredicateVlm>(
+        [](const CandidateFrame& c, const Predicate& p) {
+            if (p.id != "person") return false;
+            if (c.crop.empty()) return true;
+            size_t bright = 0;
+            for (uint8_t v : c.crop) if (v > 90) ++bright;
+            return bright * 100 >= c.crop.size() * 8;  // >=8% bright pixels => a figure is present
+        },
+        120);
     _vlmName = @"scripted";
 }
 
