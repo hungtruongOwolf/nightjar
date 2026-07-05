@@ -27,29 +27,39 @@ struct MonitorView: View {
                     }.padding(.top, 8)
 
                     let s = driver.stats
+                    let w = driver.windowed(minutes: 2)
+
+                    // Windowed — the accurate "right now", not a lifetime average.
+                    MonoLabel(text: w.frames > 0 ? "LAST 2 MINUTES" : "LAST 2 MINUTES · warming up…", size: 9.5, opacity: 0.5)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        Metric(value: "\(s.framesSkippedPct)%", label: "frames skipped at the gate", hint: "VLM never woke for these")
-                        Metric(value: "\(s.vlmChecks)", label: "Tier-2 VLM checks", hint: "expensive path, run rarely")
+                        Metric(value: "\(w.frames)", label: "frames seen", hint: "in the window")
+                        Metric(value: "\(w.skippedPct)%", label: "skipped at the gate", hint: "VLM stayed asleep")
+                        Metric(value: "\(w.vlm)", label: "VLM checks", hint: "the expensive path")
+                        Metric(value: "\(w.alerts)", label: "captures", hint: "alerts fired", accent: true)
+                    }
+
+                    MonoLabel(text: "LATENCY (WARM PERCENTILES)", size: 9.5, opacity: 0.5)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         Metric(value: fmt(s.gateMs, "ms"), label: "gate cost · p50", hint: "Tier-1, per frame")
                         Metric(value: fmt(s.gateP99Ms, "ms"), label: "gate cost · p99", hint: "worst case")
                         Metric(value: fmt(s.eventToAlertMs, "ms"), label: "event → alert · p50", hint: "hero latency H1", accent: true)
-                        Metric(value: "\(s.conflationDrops)", label: "conflation drops", hint: "bursts dropped-old, counted")
+                        Metric(value: "\(s.conflationDrops)", label: "conflation drops", hint: "bursts dropped-old")
                     }
 
-                    // Hardware / power — the efficiency story, live.
+                    // Hardware / power — the efficiency + endurance story, live.
                     VStack(alignment: .leading, spacing: 12) {
                         MonoLabel(text: "HARDWARE & POWER", size: 9.5, opacity: 0.5)
-                        HStack(spacing: 12) {
-                            Bar(label: "VLM compute avoided", pct: Int(s.framesSkippedPct), tint: NW.green)
-                        }
+                        Row(k: "Battery", v: driver.battery.percent >= 0 ? "\(driver.battery.percent)%\(driver.battery.charging ? " · charging" : "")" : "n/a",
+                            vColor: driver.battery.charging ? NW.green : NW.cream)
+                        Row(k: "Est. guarding runtime", v: driver.enduranceText,
+                            vColor: driver.enduranceText.hasPrefix("~") ? NW.green : NW.cream)
+                        Bar(label: "VLM compute avoided (2 min)", pct: w.skippedPct, tint: NW.green)
                         Row(k: "Tier-2 model", v: driver.tier2, vColor: driver.tier2.hasPrefix("Smol") ? NW.green : NW.cream)
                         Row(k: "Thermal state", v: thermal().0, vColor: thermal().1)
-                        Row(k: "Expensive path (VLM)", v: "\(s.vlmChecks) of \(s.framesProcessed) frames")
-                        Row(k: "Perf-per-watt lever", v: "gate skips \(s.framesSkippedPct)% before the VLM")
                         Row(k: "Data leaving device", v: "none", vColor: NW.green)
                     }.padding(16).background(NW.card).cornerRadius(16)
 
-                    Text("Efficiency isn't a number to hit — it's the design: the cheap NEON gate discards most frames so the expensive VLM (P-cores) runs on a few %. That's the perf-per-watt lever this monitor shows live.")
+                    Text("The endurance number is measured, not assumed: it projects from the actual battery drain since you armed the guard (a few minutes to settle). The cheap NEON gate skipping most frames is why that number is long — that's the perf-per-watt lever.")
                         .font(.system(size: 12)).lineSpacing(3).foregroundColor(NW.muted(0.5))
 
                     if driver.tier2.hasPrefix("Smol") {

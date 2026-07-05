@@ -5,6 +5,7 @@ struct AlertRecord: Identifiable {
     let id = UUID()
     let text: String
     let image: CGImage?
+    var frames: [CGImage] = []   // short event clip (last ~2s)
     let date: Date
 }
 
@@ -57,7 +58,13 @@ struct AlertsView: View {
 
     private func card(_ a: AlertRecord) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            thumb(a.image).frame(height: 120).frame(maxWidth: .infinity).clipped()
+            ZStack(alignment: .topTrailing) {
+                thumb(a.image ?? a.frames.first).frame(height: 120).frame(maxWidth: .infinity).clipped()
+                if a.frames.count > 1 {
+                    Text("▶ CLIP").font(NW.mono(8)).foregroundColor(.white)
+                        .padding(.horizontal, 6).padding(.vertical, 3).background(NW.rose).clipShape(Capsule()).padding(6)
+                }
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(a.text).font(.system(size: 11.5, weight: .medium)).foregroundColor(NW.creamDim).lineLimit(2)
                 Text(Self.fmt.string(from: a.date)).font(NW.mono(9)).foregroundColor(NW.muted(0.45))
@@ -82,13 +89,19 @@ private struct DetailView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             VStack(spacing: 16) {
-                if let img = alert.image {
+                if alert.frames.count > 1 {
+                    // play the event clip as a looping flipbook (~12 fps)
+                    TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { tl in
+                        let i = Int(tl.date.timeIntervalSinceReferenceDate * 12) % alert.frames.count
+                        Image(decorative: alert.frames[i], scale: 1).resizable().aspectRatio(contentMode: .fit).cornerRadius(12)
+                    }
+                } else if let img = alert.image {
                     Image(decorative: img, scale: 1).resizable().aspectRatio(contentMode: .fit).cornerRadius(12)
                 }
                 VStack(spacing: 6) {
                     Text(alert.text).font(.system(size: 15)).foregroundColor(NW.creamDim).multilineTextAlignment(.center)
                     Text(AlertsView.fmt.string(from: alert.date)).font(NW.mono(11)).foregroundColor(NW.muted(0.5))
-                    MonoLabel(text: "STAYED ON THIS DEVICE", size: 9, opacity: 0.4)
+                    MonoLabel(text: alert.frames.count > 1 ? "CLIP · \(alert.frames.count) FRAMES · ON-DEVICE" : "STAYED ON THIS DEVICE", size: 9, opacity: 0.4)
                 }
                 Button { dismiss() } label: {
                     Text("Close").font(.system(size: 15, weight: .semibold)).foregroundColor(.white)

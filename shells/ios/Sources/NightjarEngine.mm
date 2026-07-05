@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <ctime>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -145,6 +146,7 @@ struct LiveEngine {
         int gated = (int)cnt(Counter::FramesGated);
         NJStats st{};
         st.framesProcessed = captured;
+        st.framesGated = gated;
         st.framesSkippedPct = captured > 0 ? (int)std::lround(100.0 * (captured - gated) / captured) : 0;
         st.vlmChecks = (int)cnt(Counter::VlmInferences);
         st.conflationDrops = (int)cnt(Counter::ConflationDrops);
@@ -226,12 +228,29 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     std::vector<uint8_t> _lastY;  // most recent frame (packed), for alert snapshots
     int _lastW;
     int _lastH;
+    std::deque<std::vector<uint8_t>> _ring;  // recent frames for event clips
 }
 
 - (CGImageRef)currentSnapshotCopy {
     std::lock_guard<std::mutex> lk(_frameMu);
     if (_lastY.empty()) return nullptr;
     return make_gray_image_wh(_lastY.data(), _lastW, _lastH);
+}
+
+- (NSArray*)recentClipFrames {
+    std::lock_guard<std::mutex> lk(_frameMu);
+    NSMutableArray* out = [NSMutableArray array];
+    if (_ring.empty() || _lastW == 0) return out;
+    // subsample to ~24 frames across the ring
+    const int want = 24;
+    const int n = (int)_ring.size();
+    const int step = n > want ? n / want : 1;
+    for (int i = 0; i < n; i += step) {
+        CGImageRef img = make_gray_image_wh(_ring[(size_t)i].data(), _lastW, _lastH);
+        [out addObject:(__bridge id)img];
+        CGImageRelease(img);  // array retains
+    }
+    return out;
 }
 
 - (void)setSubject:(NSString*)subjectKey {
@@ -304,12 +323,14 @@ BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
     fv.ts_mono_ns = now_ns();
     fv.seq = _seq++;
     NJStats st = _engine->process(fv);
-    {  // keep a packed copy for alert snapshots
+    {  // keep a packed copy (snapshot) + a rolling ring (clip)
         std::lock_guard<std::mutex> lk(_frameMu);
         _lastW = fv.width; _lastH = fv.height;
         _lastY.resize((size_t)fv.width * fv.height);
         for (int y = 0; y < fv.height; ++y)
             std::memcpy(&_lastY[(size_t)y * fv.width], fv.y_plane + (size_t)y * fv.stride, fv.width);
+        _ring.push_back(_lastY);
+        while (_ring.size() > 60) _ring.pop_front();  // ~2s at 30fps
     }
     CVPixelBufferUnlockBaseAddress(pb, kCVPixelBufferLock_ReadOnly);
     void (^cb)(NJStats) = _onStats;

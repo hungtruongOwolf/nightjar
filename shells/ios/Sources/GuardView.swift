@@ -4,6 +4,14 @@ import SwiftUI
 // Owns the live C++ engine + camera, republishes the stream for SwiftUI.
 // Uses the real camera when present (device / Mac webcam); on the Simulator it
 // falls back to the engine's synthetic scene.
+// Rolling-window counts (last N minutes) — the honest "right now" numbers, not
+// a lifetime average that converges to a meaningless constant.
+struct WindowStats {
+    var frames = 0, gated = 0, vlm = 0, alerts = 0
+    var minutes = 0.0
+    var skippedPct: Int { frames > 0 ? Int((100.0 * Double(frames - gated) / Double(frames)).rounded()) : 0 }
+}
+
 final class EngineDriver: ObservableObject {
     @Published var frame: CGImage?      // synthetic mode only
     @Published var stats = NJStats()
@@ -12,32 +20,49 @@ final class EngineDriver: ObservableObject {
     @Published var tier2 = "loading…"
     @Published var loading = false
     @Published var alerts: [AlertRecord] = []
-
-    // Every alert keeps the photo that triggered it — the evidence the user
-    // reviews later (the engine's EventClipStore is the fuller on-disk version).
-    private func record(_ text: String) {
-        alertText = text
-        let img: CGImage? = usingCamera ? engine.currentSnapshotCopy() : frame
-        alerts.insert(AlertRecord(text: text, image: img, date: Date()), at: 0)
-        if alerts.count > 30 { alerts.removeLast() }
-    }
+    @Published var battery = BatteryInfo()
+    @Published var enduranceText = "measuring…"
 
     let engine = NightjarEngine()
     private lazy var camera = CameraCapture(engine: engine)
     var session: AVCaptureSession { camera.session }
 
+    private var samples: [(t: Date, cap: Int, gated: Int, vlm: Int)] = []
+    private var synthRing: [CGImage] = []
+    private var batTimer: Timer?
+    private var batStart: (Date, Int)?
+
+    func windowed(minutes: Double) -> WindowStats {
+        let cutoff = Date().addingTimeInterval(-minutes * 60)
+        let win = samples.filter { $0.t >= cutoff }
+        guard let f = win.first, let l = win.last, win.count >= 2 else { return WindowStats() }
+        var w = WindowStats()
+        w.frames = l.cap - f.cap; w.gated = l.gated - f.gated; w.vlm = l.vlm - f.vlm
+        w.alerts = alerts.filter { $0.date >= cutoff }.count
+        w.minutes = l.t.timeIntervalSince(f.t) / 60
+        return w
+    }
+
+    private func ingest(_ s: NJStats) {
+        stats = s
+        let now = Date()
+        if let last = samples.last, now.timeIntervalSince(last.t) < 0.9 { return }  // ~1 sample/s
+        samples.append((now, Int(s.framesProcessed), Int(s.framesGated), Int(s.vlmChecks)))
+        let cutoff = now.addingTimeInterval(-330)
+        samples.removeAll { $0.t < cutoff }
+    }
+
     func start(trigger: String, subject: String, zone: [CGPoint]) {
-        alertText = nil
+        alertText = nil; samples.removeAll(); synthRing.removeAll()
         engine.setSubject(subject)
         engine.setZonePolygon(zone.isEmpty ? [] : zone.map(njPoint))
+        startBattery()
         if CameraCapture.hasCamera {
             usingCamera = true
             loading = true
-            // The real VLM loads the model (~1–2s); do it off the main thread so
-            // the UI doesn't freeze on first arm.
-            DispatchQueue.global(qos: .userInitiated).async {
+            DispatchQueue.global(qos: .userInitiated).async {  // load the VLM off-main
                 self.engine.startCamera(withTrigger: trigger,
-                                        onStats: { [weak self] s in self?.stats = s },
+                                        onStats: { [weak self] s in self?.ingest(s) },
                                         onAlert: { [weak self] t in self?.record(t) })
                 self.camera.start()
                 let name = self.engine.tier2Name()
@@ -46,12 +71,59 @@ final class EngineDriver: ObservableObject {
         } else {
             usingCamera = false
             engine.startSynthetic(withTrigger: trigger,
-                                  onFrame: { [weak self] img, s in self?.frame = img; self?.stats = s },
+                                  onFrame: { [weak self] img, s in self?.frame = img; self?.pushSynth(img); self?.ingest(s) },
                                   onAlert: { [weak self] t in self?.record(t) })
             tier2 = engine.tier2Name()
         }
     }
-    func stop() { camera.stop(); engine.stop() }
+
+    func stop() { camera.stop(); engine.stop(); batTimer?.invalidate(); batTimer = nil }
+
+    private func pushSynth(_ img: CGImage) {
+        synthRing.append(img); if synthRing.count > 48 { synthRing.removeFirst() }
+    }
+
+    // Each alert keeps the photo AND a short event clip (last ~2s). Evidence
+    // stays on-device (the engine's EventClipStore is the fuller on-disk clip).
+    private func record(_ text: String) {
+        alertText = text
+        let img: CGImage? = usingCamera ? engine.currentSnapshotCopy() : frame
+        let clip: [CGImage] = usingCamera
+            ? ((engine.recentClipFrames() as? [Any])?.map { $0 as! CGImage } ?? [])
+            : subsample(synthRing, 24)
+        alerts.insert(AlertRecord(text: text, image: img, frames: clip, date: Date()), at: 0)
+        if alerts.count > 12 { alerts.removeLast() }  // clips hold frames — cap memory
+    }
+
+    private func startBattery() {
+        battery = Battery.read()
+        batStart = battery.percent >= 0 ? (Date(), battery.percent) : nil
+        batTimer?.invalidate()
+        batTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in self?.tickBattery() }
+        tickBattery()
+    }
+
+    private func tickBattery() {
+        let b = Battery.read(); battery = b
+        if b.charging { enduranceText = "on power (endurance is measured on battery)"; return }
+        if let (t0, p0) = batStart, b.percent >= 0 {
+            let hrs = Date().timeIntervalSince(t0) / 3600
+            let drop = Double(p0 - b.percent)
+            if hrs > 0.03 && drop >= 1 {
+                let remain = Double(b.percent) / (drop / hrs)
+                enduranceText = String(format: "~%.1f h left at this rate", remain)
+                return
+            }
+        }
+        if let sys = b.systemHoursRemaining { enduranceText = String(format: "~%.1f h left (system est.)", sys) }
+        else { enduranceText = "measuring…" }
+    }
+}
+
+private func subsample(_ a: [CGImage], _ n: Int) -> [CGImage] {
+    guard a.count > n, n > 0 else { return a }
+    let step = max(a.count / n, 1)
+    return stride(from: 0, to: a.count, by: step).map { a[$0] }
 }
 
 // NSValue(CGPoint) differs between iOS and macOS.
@@ -86,7 +158,15 @@ struct GuardView: View {
             }
             if showAlert { alertOverlay }
         }
-        .onAppear { driver.start(trigger: trigger, subject: subject, zone: zone); since = Date() }
+        .onAppear {
+            driver.start(trigger: trigger, subject: subject, zone: zone); since = Date()
+            // Screenshot hook: NJ_OPEN=monitor|alerts auto-opens that sheet.
+            if let o = ProcessInfo.processInfo.environment["NJ_OPEN"] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 18) {
+                    if o == "monitor" { showMonitor = true } else if o == "alerts" { showAlerts = true }
+                }
+            }
+        }
         .onDisappear { driver.stop() }
         .onChange(of: driver.alertText) { new in
             guard new != nil else { return }

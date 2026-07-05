@@ -12,8 +12,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef struct {
-    int framesProcessed;
-    int framesSkippedPct;
+    int framesProcessed;   // cumulative frames captured
+    int framesGated;       // cumulative frames that PASSED the gate (motion)
+    int framesSkippedPct;  // cumulative % discarded at the gate
     int vlmChecks;
     int conflationDrops;
     double eventToAlertMs;
@@ -64,6 +65,10 @@ typedef struct {
 // A grayscale snapshot of the most recent processed frame — the "photo" saved
 // with an alert. Caller releases. nil until the first frame.
 - (nullable CGImageRef)currentSnapshotCopy CF_RETURNS_RETAINED;
+
+// The last ~2s of processed frames (subsampled), as CGImages — the short event
+// CLIP saved with an alert (camera mode). Empty until enough frames.
+- (NSArray *)recentClipFrames;
 
 // Simulator fallback: engine generates + streams frames itself.
 - (void)startSyntheticWithTrigger:(NSString *)trigger
