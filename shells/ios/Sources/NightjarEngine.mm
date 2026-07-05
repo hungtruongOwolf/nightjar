@@ -152,7 +152,15 @@ CGImageRef make_gray_image(const std::vector<uint8_t>& px) {
     return img;
 }
 
+BOOL contains_any(NSString* s, NSArray<NSString*>* keys) {
+    for (NSString* k in keys) if ([s containsString:k]) return YES;
+    return NO;
+}
+
 }  // namespace
+
+@implementation NJParsedRule
+@end
 
 @implementation NightjarEngine {
     std::unique_ptr<LiveEngine> _engine;
@@ -212,6 +220,47 @@ CGImageRef make_gray_image(const std::vector<uint8_t>& px) {
             std::this_thread::sleep_for(std::chrono::milliseconds(33));
         }
     });
+}
+
++ (NJParsedRule*)compileRule:(NSString*)english {
+    NSString* s = [(english ?: @"") lowercaseString];
+    NJParsedRule* r = [NJParsedRule new];
+
+    NSString* who = @"A person";
+    if (contains_any(s, @[@"car", @"vehicle", @"truck", @"van"])) who = @"A vehicle";
+    else if (contains_any(s, @[@"animal", @"dog", @"cat", @"fox", @"raccoon", @"coyote"])) who = @"An animal";
+    else if (contains_any(s, @[@"package", @"parcel", @"delivery", @"box", @"mail"])) who = @"A package";
+
+    NSString* trig = contains_any(s, @[@"loiter", @"linger", @"hang around", @"hangs around", @"stays",
+                                       @"waiting", @"waits", @"lurk", @"stand around"]) ? @"loiter" : @"appears";
+
+    NSString* where = @"The area";
+    NSArray* zoneKeys = @[@"backyard", @"back yard", @"front door", @"doorstep", @"porch", @"driveway",
+                          @"garage", @"gate", @"garden", @"window", @"mailbox", @"kitchen counter",
+                          @"counter", @"yard", @"street"];
+    NSDictionary* zoneName = @{@"backyard": @"Backyard", @"back yard": @"Backyard", @"front door": @"Front door",
+                               @"doorstep": @"Front door", @"porch": @"Porch", @"driveway": @"Driveway",
+                               @"garage": @"Garage", @"gate": @"Gate", @"garden": @"Garden", @"window": @"Window",
+                               @"mailbox": @"Mailbox", @"kitchen counter": @"Kitchen counter", @"counter": @"Kitchen counter",
+                               @"yard": @"Yard", @"street": @"Street"};
+    for (NSString* k in zoneKeys) if ([s containsString:k]) { where = zoneName[k]; break; }
+
+    NSString* when = @"Anytime";
+    if (contains_any(s, @[@"night", @"after dark", @"overnight"])) when = @"10 PM – 6 AM";
+    NSRegularExpression* re = [NSRegularExpression regularExpressionWithPattern:@"after\\s*(\\d{1,2})\\s*(am|pm)"
+                                                                       options:NSRegularExpressionCaseInsensitive error:nil];
+    NSTextCheckingResult* m = [re firstMatchInString:s options:0 range:NSMakeRange(0, s.length)];
+    if (m) when = [NSString stringWithFormat:@"After %@ %@", [s substringWithRange:[m rangeAtIndex:1]],
+                                             [[s substringWithRange:[m rangeAtIndex:2]] uppercaseString]];
+
+    r.who = who;
+    r.where = where;
+    r.when = when;
+    r.then = @"Ping your phone + photo";
+    r.trigger = trig;
+    NSString* verb = [trig isEqualToString:@"loiter"] ? @"loitering" : @"appears";
+    r.title = [NSString stringWithFormat:@"%@ %@ · %@", who, verb, where];
+    return r;
 }
 
 - (void)stop {

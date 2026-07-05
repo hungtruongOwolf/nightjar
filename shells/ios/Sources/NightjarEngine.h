@@ -23,7 +23,23 @@ typedef struct {
     CGRect motionRect;  // normalized [0,1]
 } NJStats;
 
+// The parsed rule shown on the confirmation screen (design F1 safety net).
+@interface NJParsedRule : NSObject
+@property(nonatomic, copy) NSString *who;      // A person / A vehicle / ...
+@property(nonatomic, copy) NSString *where;    // Backyard / Front door / ...
+@property(nonatomic, copy) NSString *when;     // 10 PM – 6 AM / Anytime
+@property(nonatomic, copy) NSString *then;     // Ping your phone + photo
+@property(nonatomic, copy) NSString *trigger;  // "appears" | "loiter"
+@property(nonatomic, copy) NSString *title;    // one-line rule card title
+@end
+
 @interface NightjarEngine : NSObject
+
+// Compiles English into a structured rule ONCE, on-device. This app build uses
+// a deterministic closed-vocab parser (the production path is the LLM-backed
+// DecomposedRuleCompiler in the engine, loaded transiently at setup). The
+// confirmation screen is the safety net either way.
++ (NJParsedRule *)compileRule:(NSString *)english;
 
 // Real camera: the shell owns AVCaptureSession and pushes each frame here.
 - (void)startCameraWithTrigger:(NSString *)trigger
