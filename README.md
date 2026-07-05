@@ -8,6 +8,25 @@
 
 Built for the **Arm Create: AI Optimization Challenge 2026 — Track 3 (Mobile AI, "camera intelligence")**. All inference runs locally on Arm64 via llama.cpp + KleidiAI.
 
+<p align="center">
+  <img src="docs/media/flow.gif" width="270" alt="Nightjar product flow: hello → type a rule → confirm → mark zone → watch list → live guard → alert"/>
+  &nbsp;&nbsp;
+  <img src="docs/media/guard-live.gif" width="270" alt="Nightjar live guard: motion box tracks a figure, alert fires"/>
+</p>
+<p align="center"><sub>Left: the flow — describe a rule in English → confirm → mark a zone → guard. Right: the live guard (Mac webcam / iOS) — the gate tracks motion and the alert fires.</sub></p>
+
+## ▶︎ Try it — judges start here (5 minutes · no iPhone · no model)
+
+```sh
+git clone https://github.com/hungtruongOwolf/nightjar && cd nightjar
+make test    # 23/23 unit tests — NEON==scalar parity, temporal engine, clip codec
+make demo    # full pipeline on a synthetic clip → alerts + a self-generated report
+```
+
+- **Live camera demo (Mac webcam):** `cd shells/ios && xcodegen && xcodebuild -scheme NightjarMac -configuration Release build`, open the built `NightjarMac.app`, allow the camera.
+- **Real SmolVLM + KleidiAI numbers, full validation ladder:** **[JUDGES.md](JUDGES.md)**.
+- **Sample `make demo` output:** **[report.md](report.md)**. · **Everything that's done + submission notes:** **[SUBMISSION.md](SUBMISSION.md)**.
+
 ```mermaid
 flowchart LR
   cam["Camera<br/>640x480, 30fps"] --> gate["NEON motion gate<br/>56us/frame - E-cores"]
