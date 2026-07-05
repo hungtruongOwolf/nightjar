@@ -1,2 +1,2 @@
-// Exposes the Objective-C++ engine bridge to Swift.
-#import "NightjarBridge.h"
+// Exposes the Objective-C++ live engine to Swift.
+#import "NightjarEngine.h"

@@ -155,14 +155,18 @@ A bounded, rotating on-device store (hard cap, oldest evicted). A clip is a *spa
 
 ## The app
 
-The iOS shell is intentionally thin — **0% business logic in Swift**. It compiles the portable C++ engine straight in and drives it through an Obj-C++ bridge; every decision is made in C++. Below, running on the iOS Simulator: the *same* engine, replaying a synthetic clip through the *real* pipeline (Tier-2 is the scripted VLM, so no model or camera is needed). One rule fires on a **rising edge** (`appeared`), the other on **sustained dwell** (`present 2s`) — a distinction a detector can't make — with live telemetry.
+The iOS shell is intentionally thin — **0% business logic in Swift**. It compiles the portable C++ engine straight in and drives it through an Obj-C++ bridge; every decision is made in C++. The guard screen is **live**: frames stream through the whole pipeline in real time (the same path AVFoundation feeds on device), so you watch the motion gate track a figure, the stats tick, and the alert fire the moment the temporal rule trips — no batch, no canned result.
 
 <p align="center">
-  <img src="shells/ios/screenshots/02-appears-alert.png" width="31%" alt="Nightjar iOS — person appears alert"/>
-  <img src="shells/ios/screenshots/03-loiter-alert.png" width="31%" alt="Nightjar iOS — loitering alert"/>
+  <img src="shells/ios/screenshots/01-hello.png" width="23%" alt="Nightjar — hello"/>
+  <img src="shells/ios/screenshots/02-rules.png" width="23%" alt="Nightjar — watch list"/>
+  <img src="shells/ios/screenshots/03-live-tracking.png" width="23%" alt="Nightjar — live gate tracking a figure"/>
+  <img src="shells/ios/screenshots/04-live-alert.png" width="23%" alt="Nightjar — live loitering alert"/>
 </p>
 
-> Build it yourself: `cd shells/ios && xcodegen && xcodebuild -scheme Nightjar -sdk iphonesimulator build`. No signing, no model, no device required.
+Running on the iOS Simulator (Release). The live motion box is the real Tier-1 gate output; the stats are live telemetry — **gate 0.13 ms, event→alert 141 ms**. Tier-2 here is the scripted VLM (no model/camera needed on the Simulator); on device the same seam takes SmolVLM + the camera.
+
+> Build it yourself: `cd shells/ios && xcodegen && xcodebuild -scheme Nightjar -sdk iphonesimulator -configuration Release build`. No signing, no model, no device required.
 
 ---
 
