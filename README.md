@@ -16,9 +16,9 @@ Built for the **Arm Create: AI Optimization Challenge 2026, Track 3 (Mobile AI, 
 <p align="center"><sub>Left, the setup flow: describe a rule in English, confirm it, mark a zone, guard. Right, the live guard on a Mac webcam / iOS: the gate tracks motion and the alert fires.</sub></p>
 
 <p align="center">
-  <video src="https://github.com/hungtruongOwolf/nightjar/raw/master/docs/media/demo.mp4" poster="https://github.com/hungtruongOwolf/nightjar/raw/master/docs/media/demo-poster.jpg" width="640" controls></video>
+  <a href="https://youtu.be/SwZJ1pdq918"><img src="docs/media/demo-poster.jpg" width="640" alt="Watch the Nightjar demo (2 minutes, with sound)"/></a>
 </p>
-<p align="center"><sub>The 2-minute demo, plays here with sound. Also on <a href="https://youtu.be/SwZJ1pdq918">YouTube</a>.</sub></p>
+<p align="center"><b><a href="https://youtu.be/SwZJ1pdq918">Watch the 2-minute demo (with sound)</a></b></p>
 
 ## Try it (judges start here)
 
